@@ -1,5 +1,1 @@
-/* Configuration de la boutique en ligne.
-   Dans l'application : Réglages > Boutique en ligne > « Copier config.js »,
-   puis remplacez tout le contenu de ce fichier par ce qui a été copié.
-   Tant que ce fichier est vide, la boutique tourne en mode démonstration. */
-window.BOUTIQUE={url:"",anon:""};
+window.BOUTIQUE={url:"https://sxbcqxilzqkrqmlwhfsi.supabase.co",anon:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4YmNxeGlsenFrcnFtbHdoZnNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMxMTE1MjIsImV4cCI6MjEwODY4NzUyMn0.oZ-Py-eX_biKirF2xmeTDv6jSa1f8ud1i0jgZMIU_rw"};
