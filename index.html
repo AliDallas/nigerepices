@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Boutique en ligne</title>
+<meta name="description" content="Niger Épices : épices, viandes séchées, criquets et chenilles à Bamako. Commandez en ligne, retrait ou livraison.">
+<meta name="theme-color" content="#1B1B1B">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23C8102E'/%3E%3Cpath d='M8 12h16l-1.5 12h-13zM12 12a4 4 0 0 1 8 0' fill='none' stroke='%23FFF6D6' stroke-width='2'/%3E%3C/svg%3E">
 <style>
 :root{--bg:#FFF6D6;--surface:#fff;--surface2:#FBEBB0;--fg:#1B1B1B;--muted:#5C5547;--line:#E4D79F;--accent:#C8102E;--green:#0B7A3B;--gold:#E3A400;--bad:#B3001B}
@@ -37,7 +39,7 @@ label input,label select,label textarea{margin-top:4px;color:var(--fg);font-weig
 .btn:disabled{opacity:.45;cursor:not-allowed}
 .ph[data-zoom]{cursor:zoom-in;position:relative}
 .ph[data-zoom]::after{content:'🔍';position:absolute;right:8px;bottom:8px;width:34px;height:34px;border-radius:50%;background:rgba(27,27,27,.78);display:grid;place-items:center;font-size:16px}
-#lb{position:fixed;inset:0;background:rgba(15,12,8,.94);z-index:50;display:none;flex-direction:column;touch-action:none;user-select:none}
+#lb{position:fixed;inset:0;background:rgba(15,12,8,.97);z-index:50;display:none;flex-direction:column;touch-action:none;user-select:none}
 #lb.on{display:flex}
 #lb .top,#lb .bot{display:flex;gap:8px;align-items:center;padding:10px 12px;color:#FFF6D6;flex-wrap:wrap}
 #lb .top{justify-content:space-between}
@@ -68,6 +70,56 @@ h2{margin:6px 0}
 .inv{background:#fff;color:#111;border:2px solid #111;border-radius:12px;padding:16px;margin:10px 0}
 .inv table{width:100%;border-collapse:collapse;font-size:14px}.inv td,.inv th{padding:6px 4px;border-bottom:1px solid #ddd;text-align:left}.inv td.r,.inv th.r{text-align:right}
 @media print{body{background:#fff}.page{box-shadow:none;border:none}header,.pzband,.foot,.bar,.noprint{display:none!important}.inv{border:none}.wrap{padding:0}}
+
+header .brand{display:flex;gap:12px;align-items:center;cursor:pointer;min-width:0}
+header.big img{width:88px;height:88px;border-radius:16px}
+header.big h1{font-size:30px;line-height:1.1}
+header.big .in{padding:14px 18px}
+.ribbon{background:#0B7A3B;border-top:3px solid #E3A400;border-bottom:3px solid #E3A400;overflow:hidden;color:#FFF6D6;font-weight:800;letter-spacing:.08em;text-transform:uppercase;font-size:14px;margin-bottom:14px}
+.rb-in{display:flex;width:max-content;animation:rb 120s linear infinite;padding:9px 0}
+.rb-set{display:flex;flex:none;white-space:nowrap}.rb-set span{padding:0 6px}.rb-set i{font-style:normal;color:#E3A400;padding:0 8px}
+@keyframes rb{to{transform:translateX(-50%)}}
+.ribbon:hover .rb-in{animation-play-state:paused}
+@media (prefers-reduced-motion:reduce){.rb-in{animation:none}.ribbon{overflow-x:auto}}
+.pn{cursor:pointer}.pn:hover{text-decoration:underline}
+.cdesc{font-size:13px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hero{background:#1B1B1B url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='44'%3E%3Crect width='44' height='44' fill='%231B1B1B'/%3E%3Ccircle cx='22' cy='22' r='10' fill='none' stroke='%23E3A400' stroke-width='3'/%3E%3Ccircle cx='22' cy='22' r='4' fill='%23C8102E'/%3E%3Ccircle cx='0' cy='0' r='4' fill='%230B7A3B'/%3E%3Ccircle cx='44' cy='0' r='4' fill='%230B7A3B'/%3E%3Ccircle cx='0' cy='44' r='4' fill='%230B7A3B'/%3E%3Ccircle cx='44' cy='44' r='4' fill='%230B7A3B'/%3E%3C/svg%3E");padding:34px 16px}
+.hin{max-width:720px;margin:0 auto;background:#1B1B1B;border:3px solid #E3A400;border-radius:22px;padding:28px 20px;color:#FFF6D6;text-align:center}
+.hlogo{width:150px;height:150px;border-radius:24px;background:#fff;object-fit:contain;margin:0 auto 14px;display:block}
+.hin h1{font-size:clamp(32px,7vw,54px);margin:0;line-height:1.05}
+.htag{color:#E3A400;font-weight:700;letter-spacing:.04em;margin:10px 0 0}
+.hmsg{opacity:.9;margin:8px 0 0}
+.hcta{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:20px}
+.btn.go{background:var(--gold);color:#1B1B1B;border-color:var(--gold);font-size:18px;padding:14px 26px}
+a.btn{display:inline-block;text-decoration:none}
+.sec{padding:24px 16px 6px;max-width:980px;margin:0 auto}.sec h2{font-size:24px;margin:0}.sec .sub{margin:2px 0 0}
+.strip{display:flex;gap:12px;overflow-x:auto;padding:12px 2px 14px;scroll-snap-type:x proximity}
+.sp,.ct{background:var(--surface);border:2px solid var(--fg);border-radius:18px;padding:8px;cursor:pointer;font:inherit;color:var(--fg);display:flex;flex-direction:column;gap:6px;text-align:center}
+.sp{flex:0 0 150px;scroll-snap-align:start}
+.spi{aspect-ratio:3/4;border-radius:12px;background:#fff;overflow:hidden;display:grid;place-items:center;font-size:38px;font-weight:800;color:var(--accent)}.spi img{width:100%;height:100%;object-fit:contain}
+.spn{font-weight:800;font-size:14px}
+.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-top:12px}
+.cti{aspect-ratio:4/3;border-radius:12px;background:#fff;overflow:hidden;display:grid;place-items:center;font-size:38px;font-weight:800;color:var(--accent)}.cti img{width:100%;height:100%;object-fit:contain}
+.ct strong{font-size:15px}
+.wgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-top:12px}
+.wc{background:var(--surface);border:2px solid var(--fg);border-radius:18px;padding:14px}.wc b{display:block;margin-bottom:4px}.wc span.ic{font-size:26px;display:block;margin-bottom:4px}
+.cbox{background:var(--surface);border:2px solid var(--fg);border-radius:18px;padding:16px;margin-top:12px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+.cbox .lines{line-height:1.7}
+.hfoot{text-align:center;padding:22px 16px 6px;color:var(--muted);font-size:13px}
+.wafab{position:fixed;right:16px;bottom:18px;z-index:6;background:#128C4B;color:#fff;border:2px solid #1B1B1B;border-radius:999px;padding:11px 18px;font-weight:800;text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,.35)}
+.wafab.shop{bottom:84px}
+#lb .lbody{flex:1;display:flex;min-height:0}
+#lb .lcol{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0}
+#lb .lbrand{font-weight:800;letter-spacing:.06em;text-transform:uppercase;font-size:13px;opacity:.9}
+#lb .lpanel{width:400px;max-width:44%;background:#FFF6D6;color:#1B1B1B;padding:24px 22px;overflow:auto;border-left:6px solid #E3A400;display:flex;flex-direction:column;gap:10px;touch-action:pan-y;user-select:text;-webkit-user-select:text}
+#lb .lcat{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#0B7A3B}
+#lb .lpanel h2{margin:0;font-size:28px;line-height:1.1}
+#lb .lprice{font-size:26px;font-weight:800;color:#C8102E}#lb .lprice small{font-size:14px;color:#5C5547;font-weight:600}
+#lb .lpanel .ldesc{background:none;padding:0;font-size:17px;line-height:1.55;color:#1B1B1B;white-space:pre-line;margin:4px 0}
+#lb .lstock{font-weight:700;color:#0B7A3B}#lb .lstock.out{color:#B3001B}
+#lb .lpanel button.add{background:#E3A400;color:#1B1B1B;border:2px solid #1B1B1B;height:auto;padding:13px 18px;font-size:17px;border-radius:999px}
+#lb .stage{flex:1 1 0;min-height:0}#lb .stage>img{position:absolute;inset:0;margin:auto;max-width:92%;max-height:92%;width:auto;height:auto}#lb .stage.nophoto{cursor:default}#lb .nobig{font-size:140px;line-height:1}.ph,.cti{font-size:54px}
+@media (max-width:760px){#lb .lbody{flex-direction:column}#lb .lpanel{width:auto;max-width:none;max-height:48%;border-left:0;border-top:6px solid #E3A400;padding:16px}#lb .lpanel h2{font-size:22px}#lb .lprice{font-size:22px}header.big img{width:64px;height:64px}header.big h1{font-size:22px}.hlogo{width:110px;height:110px}#lb .bot .hint,#lb #lb-rot{display:none}#lb .bot{padding:6px 10px}#lb .bot button{height:38px;min-width:38px;font-size:16px}#lb .nobig{font-size:90px}.wafab{padding:0;width:50px;height:50px;display:grid;place-items:center;font-size:0;right:12px}.wafab::before{content:'💬';font-size:24px}.wafab.shop{bottom:84px}}
 </style>
 </head>
 <body>
@@ -89,7 +141,7 @@ var DEMO_CAT={boutique:{nom:'Niger Épice (démonstration)',tel:'',adresse:'Bama
 {id:'d8',nom:'Mélange pour brochettes',cat:'Épices et poudres',unite:'bouteille',prix:1200,stock:40},
 {id:'d9',nom:'Moringa en poudre',cat:'Épices et poudres',unite:'pot',prix:2500,stock:0}]};
 function demoPic(c1,c2){return 'data:image/svg+xml;utf8,'+encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 400'><rect width='400' height='400' fill='#FBEBB0'/><ellipse cx='200' cy='300' rx='150' ry='42' fill='#B58B3C'/><ellipse cx='200' cy='285' rx='140' ry='36' fill='#E6C47A'/><path d='M70 285 Q200 60 330 285 Z' fill='"+c1+"'/><path d='M120 285 Q200 130 280 285 Z' fill='"+c2+"'/><circle cx='150' cy='250' r='6' fill='"+c2+"'/><circle cx='250' cy='240' r='5' fill='"+c1+"'/><text x='200' y='60' text-anchor='middle' font-family='sans-serif' font-size='22' font-weight='700' fill='#5C5547'>photo exemple</text></svg>")}
-var cat=null,cart={},q='',cc='Toutes',view='shop',last=null,busy=false;
+var cat=null,cart={},q='',cc='Toutes',view='home',last=null,busy=false;
 function $(s){return document.querySelector(s)}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function money(n){return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,' ')+' FCFA'}
@@ -136,21 +188,43 @@ async function loadCat(){
   try{cat=JSON.parse(localStorage.getItem('bq-cat')||'null')}catch(e){cat=null}
   if(cat)cat.offline=true;
 }
-function header(){
+function catIcon(n){n=String(n||'').toLowerCase();return /viande|kilishi|boeuf|bœuf/.test(n)?'🥩':/insect|criquet|chenille|chitoumou/.test(n)?'🦗':/herbe|feuille/.test(n)?'🌿':/assaison|sel\b/.test(n)?'🧂':/m[ée]lange/.test(n)?'🫙':/[ée]pice|poudre|piment/.test(n)?'🌶️':'🛍️'}
+function tagline(){var cs=Array.from(new Set(((cat&&cat.produits)||[]).map(function(p){return p.cat}).filter(Boolean)));return cs.slice(0,6).join(' · ')}
+function ribbon(){
+  var names=Array.from(new Set(((cat&&cat.produits)||[]).map(function(p){return p.nom}))).slice(0,40);
+  if(!names.length)return '<div class="pzband" style="margin-bottom:14px"></div>';
+  var set='<span class="rb-set">'+names.map(function(n){return '<span>'+esc(n)+'</span>'}).join('<i>✦</i>')+'<i>✦</i></span>';
+  return '<div class="ribbon" aria-hidden="true"><div class="rb-in">'+set+set+'</div></div>';
+}
+function header(big){
   var b=(cat&&cat.boutique)||{};
-  return '<header><div class="in">'+(b.logo?'<img src="'+esc(b.logo)+'" alt="">':'')+'<div><h1>'+esc(b.nom||'Boutique')+'</h1><p>'+esc([b.adresse,b.tel].filter(Boolean).join(' · '))+'</p></div><button class="btn ghost sm" data-go="track" style="margin-left:auto;white-space:nowrap">Suivre ma commande</button></div></header><div class="pzband" style="margin-bottom:14px"></div>';
+  return '<header class="'+(big?'big':'')+'"><div class="in"><div class="brand" data-go="home" role="link" tabindex="0" aria-label="Accueil">'+(b.logo?'<img src="'+esc(b.logo)+'" alt="">':'')+'<div><h1>'+esc(b.nom||'Boutique')+'</h1><p>'+esc([b.adresse,b.tel].filter(Boolean).join(' · '))+'</p></div></div><button class="btn ghost sm" data-go="track" style="margin-left:auto;white-space:nowrap">Suivre ma commande</button></div></header>'+(big?ribbon():'<div class="pzband" style="margin-bottom:14px"></div>');
+}
+function wafab(cls){var n=((cat&&cat.boutique&&cat.boutique.wa)||'').replace(/\D/g,'');return n?'<a class="wafab '+(cls||'')+' noprint" href="https://wa.me/'+n+'" target="_blank" rel="noopener">💬 WhatsApp</a>':''}
+function home(){
+  var b=cat.boutique||{},ps=cat.produits,wa=(b.wa||'').replace(/\D/g,'');
+  var withPh=ps.filter(function(p){return p.photo});
+  var cats=[];ps.forEach(function(p){var c=p.cat||'Autres',o=cats.find(function(x){return x.n===c});if(!o){o={n:c,k:0,ph:''};cats.push(o)}o.k++;if(!o.ph&&p.photo)o.ph=p.photo});
+  var h='<section class="hero"><div class="hin">'+(b.logo?'<img class="hlogo" src="'+esc(b.logo)+'" alt="">':'')+'<h1>'+esc(b.nom||'Boutique')+'</h1><p class="htag">'+esc(tagline())+'</p>'+(b.msg?'<p class="hmsg">'+esc(b.msg)+'</p>':'')+'<div class="hcta"><button class="btn go" data-go="shop">Entrer dans la boutique</button>'+(wa?'<a class="btn ghost" href="https://wa.me/'+wa+'" target="_blank" rel="noopener">Nous écrire sur WhatsApp</a>':'')+'</div></div></section><div class="pzband"></div>';
+  if(!LIVE)h+='<div class="sec"><div class="banner demo"><strong>Mode démonstration.</strong> Les commandes ne sont pas envoyées.</div></div>';
+  if(withPh.length)h+='<section class="sec"><h2>Nos produits</h2><p class="muted sub">Touchez un produit pour le découvrir.</p><div class="strip">'+withPh.slice(0,16).map(function(p){return '<button class="sp" data-open="'+esc(p.id)+'"><span class="spi"><img src="'+esc(p.photo)+'" alt="'+esc(p.nom)+'" loading="lazy"></span><span class="spn">'+esc(p.nom)+'</span></button>'}).join('')+'</div></section>';
+  if(cats.length)h+='<section class="sec"><h2>Nos rayons</h2><div class="cgrid">'+cats.map(function(c){return '<button class="ct" data-hcat="'+esc(c.n)+'"><span class="cti">'+(c.ph?'<img src="'+esc(c.ph)+'" alt="" loading="lazy">':catIcon(c.n))+'</span><strong>'+esc(c.n)+'</strong><span class="muted">'+c.k+' produit'+(c.k>1?'s':'')+'</span></button>'}).join('')+'</div></section>';
+  h+='<section class="sec"><h2>Commander chez nous</h2><div class="wgrid"><div class="wc"><span class="ic">🛒</span><b>Simple et rapide</b><span class="muted">Choisissez vos produits, vérifiez votre facture, puis validez. Pas de compte à créer.</span></div><div class="wc"><span class="ic">🚚</span><b>Retrait ou livraison</b><span class="muted">'+esc(b.liv||'Retirez votre commande en boutique ou faites-vous livrer.')+'</span></div><div class="wc"><span class="ic">💰</span><b>Paiement à la réception</b><span class="muted">Le paiement se fait à la réception, selon l’accord avec la boutique.</span></div><div class="wc"><span class="ic">📦</span><b>Suivi de commande</b><span class="muted">Suivez votre commande étape par étape avec son numéro.</span></div></div></section>';
+  var cl=[];if(b.adresse)cl.push('📍 '+esc(b.adresse));if(b.tel)cl.push('📞 <a href="tel:'+esc(String(b.tel).replace(/[^\d+]/g,''))+'">'+esc(b.tel)+'</a>');if(wa)cl.push('💬 <a href="https://wa.me/'+wa+'" target="_blank" rel="noopener">WhatsApp</a>');
+  h+='<section class="sec"><h2>Nous trouver</h2><div class="cbox"><div class="lines">'+(cl.join('<br>')||'<span class="muted">Contactez la boutique pour toute question.</span>')+'</div><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn go" data-go="shop">Voir la boutique</button><button class="btn ghost" data-go="track">Suivre ma commande</button></div></div></section><div class="hfoot">© '+new Date().getFullYear()+' '+esc(b.nom||'')+'</div>';
+  return h;
 }
 function shop(){
   var b=cat.boutique||{},cats=['Toutes'].concat(Array.from(new Set(cat.produits.map(function(p){return p.cat}).filter(Boolean))));
   var list=cat.produits.filter(function(p){return (cc==='Toutes'||p.cat===cc)&&(!q||(p.nom+' '+(p.cat||'')).toLowerCase().indexOf(q.toLowerCase())>=0)});
-  var h=header()+'<div class="wrap">';
+  var h=header(true)+'<div class="wrap">';
   if(!LIVE)h+='<div class="banner demo"><strong>Mode démonstration.</strong> Les commandes ne sont pas envoyées : elles restent sur cet appareil. Branchez la boutique à votre application pour recevoir les vraies commandes.</div>';
   if(cat.offline)h+='<div class="banner">Vous êtes hors ligne : les produits affichés datent de la dernière visite.</div>';
   if(b.msg)h+='<div class="banner">'+esc(b.msg)+'</div>';
   h+='<input id="q" type="search" placeholder="Rechercher un produit" value="'+esc(q)+'" autocomplete="off"><div class="chips">'+cats.map(function(c){return '<button class="chip '+(cc===c?'on':'')+'" data-cat="'+esc(c)+'">'+esc(c)+'</button>'}).join('')+'</div><div class="grid">';
   h+=list.map(function(p){
     var out=!(p.stock>0),cur=cart[p.id]||0;
-    return '<div class="card '+(out?'out':'')+'"><div class="ph"'+(p.photo?' data-zoom="'+p.id+'" role="button" tabindex="0" aria-label="Agrandir la photo de '+esc(p.nom)+'"':'')+'>'+(p.photo?'<img src="'+esc(p.photo)+'" alt="'+esc(p.nom)+'" loading="lazy">':esc(ini(p.nom)))+'</div><strong>'+esc(p.nom)+'</strong><div><span class="price">'+money(p.prix)+'</span> <span class="muted">/ '+esc(p.unite)+'</span></div><div class="muted">'+(out?'Indisponible pour le moment':'En stock')+'</div>'+(out?'':'<div class="qty"><button data-m="'+p.id+'" aria-label="moins">−</button><input data-q="'+p.id+'" inputmode="decimal" value="'+(cur?qf(cur):'')+'" placeholder="0"><button data-p="'+p.id+'" aria-label="plus">+</button></div>')+'</div>'}).join('')+'</div>';
+    return '<div class="card '+(out?'out':'')+'"><div class="ph" data-zoom="'+p.id+'" role="button" tabindex="0" aria-label="Voir le détail de '+esc(p.nom)+'">'+(p.photo?'<img src="'+esc(p.photo)+'" alt="'+esc(p.nom)+'" loading="lazy">':catIcon(p.cat))+'</div><strong class="pn" data-zoom="'+p.id+'" role="button" tabindex="0">'+esc(p.nom)+'</strong>'+(p.desc?'<div class="cdesc">'+esc(p.desc)+'</div>':'')+'<div><span class="price">'+money(p.prix)+'</span> <span class="muted">/ '+esc(p.unite)+'</span></div><div class="muted">'+(out?'Indisponible pour le moment':'En stock')+'</div>'+(out?'':'<div class="qty"><button data-m="'+p.id+'" aria-label="moins">−</button><input data-q="'+p.id+'" inputmode="decimal" value="'+(cur?qf(cur):'')+'" placeholder="0"><button data-p="'+p.id+'" aria-label="plus">+</button></div>')+'</div>'}).join('')+'</div>';
   if(!list.length)h+='<p class="muted">Aucun produit trouvé.</p>';
   h+='</div><div class="bar '+(count()?'on':'')+'"><div class="in"><div><strong>'+count()+' produit'+(count()>1?'s':'')+'</strong><div>'+money(total())+'</div></div><button class="btn" data-go="invoice">Voir ma facture</button></div></div>';
   return h;
@@ -182,10 +256,11 @@ function done(){
 function draw(){
   if(!cat){$('#app').innerHTML='<div class="wrap" style="padding-top:40px"><h2>Boutique indisponible</h2><p class="muted">Impossible de charger les produits. Vérifiez votre connexion et réessayez.</p><button class="btn" onclick="location.reload()">Réessayer</button></div>';return}
   var fo=document.activeElement&&document.activeElement.id,ps=document.activeElement&&document.activeElement.selectionStart;
-  $('#app').innerHTML='<div class="page">'+(view==='shop'?shop():view==='invoice'?invoice():view==='track'?track():done())+'<div class="foot noprint"></div><div style="height:70px"></div></div>';
+  $('#app').innerHTML='<div class="page">'+(view==='home'?home():view==='shop'?shop():view==='invoice'?invoice():view==='track'?track():done())+(view==='home'?'':'<div class="foot noprint"></div>')+'<div style="height:70px"></div>'+(view==='home'?wafab(''):view==='shop'?wafab('shop'):'')+'</div>';
   if(view==='invoice')updTotals();
   if(fo&&$('#'+fo)){$('#'+fo).focus();try{$('#'+fo).setSelectionRange(ps,ps)}catch(e){}}
 }
+function enterShop(){if(view==='home'){try{history.pushState(null,'','#boutique')}catch(x){}}view='shop';draw();window.scrollTo(0,0)}
 function setQty(id,v){var p=prod(id);if(!p)return;v=Math.max(0,Math.min(500,Math.round(v*100)/100));if(v>0)cart[id]=v;else delete cart[id];save()}
 function readCust(){return{nom:($('#c-nom')||{}).value||'',tel:($('#c-tel')||{}).value||'',mode:($('#c-mode')||{}).value||'retrait',adresse:($('#c-adr')||{}).value||'',zone:($('#c-zone')||{}).value||'',date:($('#c-date')||{}).value||'',note:($('#c-note')||{}).value||''}}
 function saveCust(){if(!$('#c-nom'))return;try{localStorage.setItem('bq-cust',JSON.stringify(readCust()))}catch(e){}}
@@ -213,16 +288,18 @@ async function send(){
   }
 }
 document.addEventListener('click',function(e){
-  var t=e.target.closest('[data-cat],[data-m],[data-p],[data-rm],[data-go],[data-zoom],[data-tref],#t-go,#t-sim,#send,#print');if(!t)return;
+  var t=e.target.closest('[data-cat],[data-m],[data-p],[data-rm],[data-go],[data-zoom],[data-open],[data-hcat],[data-tref],#t-go,#t-sim,#send,#print');if(!t)return;
   if(t.dataset.tref){trackRef=t.dataset.tref;draw();trackLoad(trackRef);return}
   if(t.id==='t-go'){trackLoad(($('#t-ref')||{}).value);return}
   if(t.id==='t-sim'){var m=JSON.parse(localStorage.getItem('bq-demo-st')||'{}');m[trackRef]=Math.min(3,(m[trackRef]||0)+1);localStorage.setItem('bq-demo-st',JSON.stringify(m));trackLoad(trackRef);return}
+  if(t.dataset.open){var oid=t.dataset.open;enterShop();openLB(oid);return}
+  if(t.dataset.hcat!==undefined){cc=t.dataset.hcat;enterShop();return}
   if(t.dataset.zoom){openLB(t.dataset.zoom);return}
   if(t.dataset.cat!==undefined){cc=t.dataset.cat;draw();return}
   if(t.dataset.m){var p=prod(t.dataset.m);setQty(t.dataset.m,(cart[t.dataset.m]||0)-step(p));saveCust();draw();return}
   if(t.dataset.p){var p2=prod(t.dataset.p);setQty(t.dataset.p,(cart[t.dataset.p]||0)+step(p2));saveCust();draw();return}
   if(t.dataset.rm){delete cart[t.dataset.rm];save();saveCust();draw();return}
-  if(t.dataset.go){saveCust();view=t.dataset.go;draw();window.scrollTo(0,0);if(view==='track'&&trackRef)trackLoad(trackRef);return}
+  if(t.dataset.go){saveCust();var nv=t.dataset.go;if(nv==='home'){try{history.pushState(null,'',location.pathname)}catch(x){}}else if(nv==='shop'&&view==='home'){try{history.pushState(null,'','#boutique')}catch(x){}}view=nv;draw();window.scrollTo(0,0);if(view==='track'&&trackRef)trackLoad(trackRef);return}
   if(t.id==='send')send();
   if(t.id==='print')window.print();
 });
@@ -277,7 +354,7 @@ function lbEl(){var e=document.getElementById('lb');if(!e){e=document.createElem
     else if(a==='add'){var p=prod(lb.id);if(p){setQty(p.id,(cart[p.id]||0)+step(p));closeLB();draw()}}});
   e.addEventListener('input',function(ev){if(ev.target.id==='lb-rot')lbSet({r:+ev.target.value})});
   var st=function(){return e.querySelector('.stage')};
-  e.addEventListener('wheel',function(ev){ev.preventDefault();lbSet({s:lb.s*(ev.deltaY<0?1.15:1/1.15)})},{passive:false});
+  e.addEventListener('wheel',function(ev){if(!ev.target.closest('.lcol'))return;ev.preventDefault();lbSet({s:lb.s*(ev.deltaY<0?1.15:1/1.15)})},{passive:false});
   e.addEventListener('dblclick',function(ev){if(ev.target.tagName==='IMG')lbSet(lb.s>1.2?{s:1,x:0,y:0}:{s:2.5})});
   e.addEventListener('pointerdown',function(ev){if(!ev.target.closest('.stage'))return;ptr[ev.pointerId]={x:ev.clientX,y:ev.clientY};try{ev.target.setPointerCapture(ev.pointerId)}catch(x){}pinch0=null});
   e.addEventListener('pointermove',function(ev){var o=ptr[ev.pointerId];if(!o)return;var ids=Object.keys(ptr);
@@ -291,8 +368,11 @@ function lbEl(){var e=document.getElementById('lb');if(!e){e=document.createElem
 function lbSet(o){for(var k in o)lb[k]=o[k];lb.s=Math.max(.5,Math.min(8,lb.s));if(lb.s<=1.01&&!('x' in o)){lb.x*=.5;lb.y*=.5}
   var e=document.getElementById('lb'),im=e&&e.querySelector('img');if(im)im.style.transform='translate('+lb.x+'px,'+lb.y+'px) scale('+lb.s+') rotate('+lb.r+'deg)';
   var rg=document.getElementById('lb-rot');if(rg){var v=((lb.r%360)+360)%360;rg.value=v}}
-function openLB(id){var p=prod(id);if(!p||!p.photo)return;lb={id:id,s:1,r:0,x:0,y:0};ptr={};
-  var e=lbEl();e.innerHTML='<div class="top"><strong>'+esc(p.nom)+' · '+money(p.prix)+' / '+esc(p.unite)+(p.fmt?' ('+esc(p.fmt)+')':'')+'</strong><button data-lb="close" aria-label="Fermer">✕</button></div>'+(p.desc?'<div class="ldesc">'+esc(p.desc)+'</div>':'')+'<div class="stage"><img src="'+esc(p.photo)+'" alt="'+esc(p.nom)+'" draggable="false"></div><div class="bot"><button data-lb="out" aria-label="Zoom moins">−</button><button data-lb="in" aria-label="Zoom plus">+</button><button data-lb="rl" aria-label="Tourner à gauche">⟲</button><button data-lb="rr" aria-label="Tourner à droite">⟳</button><input id="lb-rot" type="range" min="0" max="359" value="0" aria-label="Faire tourner la photo"><button data-lb="reset">Remettre</button>'+(p.stock>0?'<button class="go" data-lb="add">Ajouter au panier</button>':'')+'<div class="hint">Pincez ou molette pour zoomer · glissez pour déplacer · double-touchez pour agrandir</div></div>';
+function openLB(id){var p=prod(id);if(!p)return;lb={id:id,s:1,r:0,x:0,y:0};ptr={};
+  var e=lbEl(),out=!(p.stock>0),cur=cart[p.id]||0,b=(cat&&cat.boutique)||{};
+  var left=p.photo?'<div class="stage"><img src="'+esc(p.photo)+'" alt="'+esc(p.nom)+'" draggable="false"></div><div class="bot"><button data-lb="out" aria-label="Zoom moins">−</button><button data-lb="in" aria-label="Zoom plus">+</button><button data-lb="rl" aria-label="Tourner à gauche">⟲</button><button data-lb="rr" aria-label="Tourner à droite">⟳</button><input id="lb-rot" type="range" min="0" max="359" value="0" aria-label="Faire tourner la photo"><button data-lb="reset">Remettre</button><div class="hint">Pincez ou molette pour zoomer · glissez pour déplacer · double-touchez pour agrandir</div></div>':'<div class="stage nophoto"><div class="nobig">'+catIcon(p.cat)+'</div></div>';
+  var panel='<aside class="lpanel">'+(p.cat?'<div class="lcat">'+esc(p.cat)+'</div>':'')+'<h2>'+esc(p.nom)+'</h2><div class="lprice">'+money(p.prix)+' <small>/ '+esc(p.unite)+(p.fmt?' · '+esc(p.fmt):'')+'</small></div><div class="lstock '+(out?'out':'')+'">'+(out?'Indisponible pour le moment':'En stock')+'</div>'+(p.desc?'<p class="ldesc">'+esc(p.desc)+'</p>':'')+(out?'':'<button class="add" data-lb="add">Ajouter à ma commande</button>'+(cur?'<div class="muted">Déjà dans votre panier : '+qf(cur)+' '+esc(p.unite)+'</div>':''))+'</aside>';
+  e.innerHTML='<div class="top"><span class="lbrand">'+esc(b.nom||'')+'</span><button data-lb="close" aria-label="Fermer">✕</button></div><div class="lbody"><div class="lcol">'+left+'</div>'+panel+'</div>';
   e.classList.add('on');document.body.style.overflow='hidden';lbSet({});if(p.hd&&LIVE)loadHD(id);var c=e.querySelector('[data-lb=close]');if(c)c.focus()}
 var hdCache={};
 async function loadHD(id){
@@ -303,7 +383,9 @@ async function loadHD(id){
 }
 function closeLB(){var e=document.getElementById('lb');if(e)e.classList.remove('on');lb.id=null;document.body.style.overflow=''}
 document.addEventListener('keydown',function(e){if((e.key==='Enter'||e.key===' ')&&e.target&&e.target.dataset&&e.target.dataset.zoom){e.preventDefault();openLB(e.target.dataset.zoom)}});
-var sm=location.search.match(/[?&]suivi=([^&]+)/);if(sm){view='track';trackRef=decodeURIComponent(sm[1]).toUpperCase()}
+var sm=location.search.match(/[?&]suivi=([^&]+)/);if(sm){view='track';trackRef=decodeURIComponent(sm[1]).toUpperCase()}else if(location.hash==='#boutique')view='shop';
+window.addEventListener('popstate',function(){if(view==='home'||view==='shop'){view=location.hash==='#boutique'?'shop':'home';if(cat){closeLB();draw();window.scrollTo(0,0)}}});
+document.addEventListener('keydown',function(e){var t=e.target;if(e.key==='Enter'&&t&&t.getAttribute&&t.getAttribute('role')==='link'&&t.dataset&&t.dataset.go)t.click()});
 var DEMO=!LIVE&&!!(window.BOUTIQUE_DEMO||/[?&]demo=1/.test(location.search)||/^(localhost|127\.)/.test(location.hostname)||location.protocol==='file:');
 if(!LIVE&&!DEMO){document.title='Niger Épices · Bientôt en ligne';document.getElementById('app').innerHTML='<div class="page"><div class="wrap" style="text-align:center;padding:60px 16px"><h1 style="font-size:34px;margin:0 0 10px">Niger Épices</h1><p style="font-size:18px">Notre boutique en ligne ouvre bientôt.</p><p class="muted">Épices, viandes séchées et saveurs du Sahel, à Bamako.</p></div></div>';return}
 loadCart();loadCat().then(function(){if(cat){document.title=((cat.boutique||{}).nom||'Boutique')+' · Commander en ligne';Object.keys(cart).forEach(function(id){if(!prod(id))delete cart[id]})}draw();if(view==='track'&&trackRef)trackLoad(trackRef)});
