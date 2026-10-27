@@ -2238,6 +2238,18 @@ async function importDepart(auto){
   logAct('Catalogue importé',todo.length+' produits');
   toast(todo.length+' produits importés. Pensez à renseigner les codes-barres.');return true;
 }
+async function majCatalogue(){
+  if(localStorage.getItem('ne-maj-1'))return;
+  if(data.produits.length<40)return;
+  var list;try{var r=await fetch('catalogue-maj.json',{cache:'no-store'});if(!r.ok)return;list=await r.json()}catch(e){return}
+  var by={};data.produits.forEach(function(p){by[(p.nom||'').trim().toLowerCase()]=p});
+  var nu=0,up=0;
+  for(var i=0;i<list.length;i++){var x=list[i],k=x.nom.trim().toLowerCase(),p=by[k];
+    if(p){var o=Object.assign({},p,{cat:x.cat,unite:x.unite,format:x.format,cout:x.cout,prix:x.prix,prix_gros:x.prix_gros,prix_web:x.prix_web,desc:x.desc||p.desc});await S.put('produits',o);up++}
+    else{await S.put('produits',{id:'maj1-'+k.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-'),nom:x.nom,cat:x.cat,unite:x.unite,format:x.format,prix:x.prix,prix_gros:x.prix_gros,prix_web:x.prix_web,cout:x.cout,stock:0,seuil:0,code:'',paliers:[],desc:x.desc||'',archive:false,photo:x.photo||''});nu++}}
+  try{localStorage.setItem('ne-maj-1','1')}catch(e){}
+  logAct('Catalogue mis à jour',up+' produits modifiés, '+nu+' ajoutés');toast('Catalogue mis à jour : '+up+' modifiés, '+nu+' ajoutés')
+}
 async function autoDepart(){
   try{
     if(/^niger [ée]pice$/i.test(String(reglages.nom||'').trim())){await S.setReglages({nom:'Niger Épices'});if(typeof render==='function')render()}
@@ -2245,8 +2257,8 @@ async function autoDepart(){
     if(!String(reglages.bq_wa||'').trim()){await S.setReglages({bq_wa:'22392693281'})}
     if(!String(reglages.tel||'').trim()&&!String(reglages.adresse||'').trim()){await S.setReglages({tel:'+223 92 69 32 81',adresse:'Niamana Attbougou, rond-point Assimi Goïta, Bamako'});if(typeof render==='function')render()}
     if(data.produits.some(function(p){return p.exemple}))await unseed();
-    if(localStorage.getItem('ne-depart')||data.produits.length||opsOn())return;
-    if(await importDepart(true))localStorage.setItem('ne-depart','1');
+    if(!(localStorage.getItem('ne-depart')||data.produits.length||opsOn())){if(await importDepart(true))localStorage.setItem('ne-depart','1')}
+    await majCatalogue();
   }catch(e){}
 }
 async function unseed(){var ids=data.produits.filter(function(p){return p.exemple}).map(function(p){return p.id});for(var i=0;i<ids.length;i++)await S.del('produits',ids[i]);toast('Exemples supprimés')}
