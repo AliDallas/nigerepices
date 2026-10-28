@@ -9,7 +9,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Niger Épices">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="icon" href="icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800;900&display=swap">
@@ -302,6 +302,14 @@ h1{font-weight:900;letter-spacing:-.02em}h2{font-weight:900;letter-spacing:-.01e
 .sqlbox{white-space:pre-wrap;background:var(--surface2);border:2px solid var(--ink);border-radius:14px;padding:10px;font-size:12px;overflow:auto}
 textarea.in{width:100%;font-family:monospace;font-size:12px}
 .lock-bottle{display:block;margin:0 auto 6px;height:110px;width:auto;border-radius:18px;border:2px solid var(--ink);box-shadow:4px 4px 0 var(--gold)}
+.lock-card{width:min(540px,100%)}
+.lock-bots{display:flex;justify-content:center;align-items:flex-end;margin:0 0 4px;min-height:20px}
+.lbot{height:clamp(96px,26vw,150px);width:auto;max-width:none;flex:0 1 auto;min-width:0;object-fit:contain;margin:0 -4px;transform:rotate(var(--r,0deg));filter:drop-shadow(0 6px 5px rgba(0,0,0,.4));opacity:0;transition:opacity .3s;border:0;background:none;border-radius:0;box-shadow:none}
+.lbot.ok{opacity:1}
+.lbot:nth-child(2),.lbot:nth-child(4){height:clamp(108px,29vw,168px)}
+.lbot:nth-child(3){height:clamp(120px,32vw,186px);z-index:2}
+.lbot.one{height:110px;margin:0 auto}
+.lname{font-size:clamp(40px,12vw,58px)!important;line-height:1;font-weight:900;letter-spacing:-.01em;margin:6px 0 2px}
 .bighero{position:relative;overflow:visible}
 .hero-bottle{position:absolute;right:18px;top:50%;height:132px;width:auto;transform:translateY(-50%) rotate(6deg);border-radius:18px;border:3px solid var(--ink);box-shadow:5px 5px 0 var(--ink);display:none}
 @media (min-width:560px){.hero-bottle{display:block}}
@@ -846,7 +854,7 @@ function renderLock(){
       inner='<div class="ava" style="margin:0 auto;width:52px;height:52px;font-size:22px">'+initial(u&&u.nom)+'</div><h2>'+esc(u?u.nom:'')+'</h2><p class="muted">Entrez votre code à 4 chiffres</p>'+dotsHTML()+'<div class="lmsg">'+esc(lk.msg)+'</div>'+padHTML();
     }else{
       var us=data.utilisateurs.filter(function(x){return x.actif!==false}).sort(function(a,b){return (a.role===b.role?0:a.role==='admin'?-1:1)||a.nom.localeCompare(b.nom,'fr')});
-      inner='<h2>'+esc(reglages.nom||'Niger Épices')+'</h2><p class="muted">Qui utilise l’application ?</p>'+us.map(function(x){return '<button class="ubtn" data-act="pick" data-id="'+x.id+'"><span class="ava">'+initial(x.nom)+'</span><span class="grow"><strong>'+esc(x.nom)+'</strong><br><span class="muted">'+(x.role==='admin'?'Administrateur':'Caisse')+'</span></span></button>'}).join('');
+      inner='<h2 class="lname">'+esc(reglages.nom||'Niger Épices')+'</h2><p class="muted">Qui utilise l’application ?</p>'+us.map(function(x){return '<button class="ubtn" data-act="pick" data-id="'+x.id+'"><span class="ava">'+initial(x.nom)+'</span><span class="grow"><strong>'+esc(x.nom)+'</strong><br><span class="muted">'+(x.role==='admin'?'Administrateur':'Caisse')+'</span></span></button>'}).join('');
     }
   }
   var noAdmin=ready&&!data.utilisateurs.some(function(u){return u.role==='admin'&&u.actif!==false});
@@ -1851,7 +1859,26 @@ function cClients(){
   return cBanner()+'<div class="vh"><h2>Crédits clients</h2></div>'+(L.length?'<div class="kpis">'+kpi('Total à encaisser',money(sumBy(L,function(c){return c.du})),L.length+' client'+(L.length>1?'s':''),'warn')+'</div><section class="card">'+L.map(function(c){return '<div class="row"><div class="grow"><strong>'+esc(c.n)+'</strong>'+(c.t?'<div class="muted">'+esc(c.t)+'</div>':'')+'</div><span class="badge low">Doit '+money(c.du)+'</span></div>'}).join('')+'</section>':'<div class="empty"><p class="muted">Aucun client ne doit d’argent.</p></div>');
 }
 var CVIEWS={cockpit:cCockpit,ventes:cVentes,stock:cStock,clients:cClients,depenses:cDepenses};
-function lockShell(inner){return '<svg class="lock-bg" aria-hidden="true"><rect width="100%" height="100%" fill="url(#pd)"/></svg><div class="lock-card"><svg class="band" aria-hidden="true"><rect width="100%" height="100%" fill="url(#pz)"/></svg><div class="lock-in"><img class="lock-bottle" src="'+BRAND_BOTTLE+'" alt="">'+inner+'</div></div>'}
+function lockShell(inner){return '<svg class="lock-bg" aria-hidden="true"><rect width="100%" height="100%" fill="url(#pd)"/></svg><div class="lock-card"><svg class="band" aria-hidden="true"><rect width="100%" height="100%" fill="url(#pz)"/></svg><div class="lock-in">'+lockBots()+inner+'</div></div>'}
+function lockBots(){
+  var ps=(data&&data.produits||[]).filter(function(p){return p.photo&&!p.archive&&!p.exemple}).slice(0,5);
+  if(ps.length<3)return '<div class="lock-bots"><img class="lbot one" src="'+BRAND_BOTTLE+'" alt=""></div>';
+  var rot=[-6,-3,0,3,6];
+  return '<div class="lock-bots">'+ps.map(function(p,i){return '<img class="lbot" src="'+p.photo+'" alt="" style="--r:'+rot[i]+'deg">'}).join('')+'</div>'}
+function cutout(im){
+  if(im.dataset.c)return;im.dataset.c='1';
+  try{var w=im.naturalWidth,h=im.naturalHeight;if(!w||!h){im.classList.add('ok');return}
+  var m0=Math.min(1,320/Math.max(w,h));w=Math.round(w*m0);h=Math.round(h*m0);
+  var c=document.createElement('canvas');c.width=w;c.height=h;var x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,w,h);x.drawImage(im,0,0,w,h);
+  var d=x.getImageData(0,0,w,h),a=d.data,seen=new Uint8Array(w*h),st=[],i;
+  function add(k){if(!seen[k]&&Math.min(a[k*4],a[k*4+1],a[k*4+2])>226){seen[k]=1;st.push(k)}}
+  for(i=0;i<w;i++){add(i);add((h-1)*w+i)}for(i=0;i<h;i++){add(i*w);add(i*w+w-1)}
+  while(st.length){var k=st.pop(),px=k%w,py=(k/w)|0;if(px>0)add(k-1);if(px<w-1)add(k+1);if(py>0)add(k-w);if(py<h-1)add(k+w)}
+  for(i=0;i<w*h;i++){if(seen[i])a[i*4+3]=0}
+  for(var yy=1;yy<h-1;yy++)for(var xx=1;xx<w-1;xx++){var q=yy*w+xx;if(seen[q])continue;if(seen[q-1]||seen[q+1]||seen[q-w]||seen[q+w]){var m=Math.min(a[q*4],a[q*4+1],a[q*4+2]);if(m>190)a[q*4+3]=Math.max(40,Math.round(255-(m-190)/36*215))}}
+  x.putImageData(d,0,0);im.src=c.toDataURL('image/png')}catch(e){}
+  im.classList.add('ok')}
+document.addEventListener('load',function(e){var el=e.target;if(el&&el.classList&&el.classList.contains('lbot'))cutout(el)},true);
 function renderChooser(){
   if(ui.linking){renderLink();return}
   $('#lock').hidden=false;$('#app').hidden=true;
