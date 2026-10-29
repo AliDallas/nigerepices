@@ -1560,7 +1560,11 @@ function catalogueText(type){
 }
 
 /* ---------- views: commandes, clients, dépenses ---------- */
-function blOrder(o){return {numero:'BC-'+String(o.id).slice(-5).toUpperCase(),ts:o.ts,clientId:o.clientId,clientNom:o.clientNom,type:o.type,lignes:o.lignes,total:o.total,paye:o.acompte||0,remise:0,mode:'—',vendeur:''}}
+function blOrder(o,kind){
+  var pre=kind==='pf'?'PF-':kind==='f'?'FA-':'BC-',L=o.lignes.slice();
+  if(kind!=='bl'&&o.frais>0)L.push({pid:'',nom:'Frais de livraison'+(o.zone?' · '+o.zone:''),qte:1,unite:'',prix:o.frais});
+  var tot=sumBy(L,function(l){return l.qte*l.prix});
+  return {numero:pre+String(o.id).slice(-5).toUpperCase(),ts:kind==='bl'?o.ts:Date.now(),clientId:o.clientId,clientNom:o.clientNom,tel:o.tel,type:o.type,lignes:L,total:tot,paye:o.acompte||0,remise:0,mode:o.acompte>0?'Acompte':'',vendeur:''}}
 function vCommandes(){
   var h='<div class="vh"><h2>Commandes</h2><div class="vh-r">'+(opsOn()&&reglages.bq_actif?'<button class="btn ghost" data-act="bq-pull">Récupérer les commandes web</button>':'')+'<button class="btn" data-act="new-commande">Nouvelle commande</button></div></div>';
   h+='<div class="chips">'+['Actives'].concat(STATUTS).map(function(s){return '<button class="chip '+(ui.ostat===s?'on':'')+'" data-act="ostat" data-v="'+s+'">'+s+'</button>'}).join('')+'</div>';
@@ -1571,7 +1575,7 @@ function vCommandes(){
     if(o.statut==='Nouvelle')btns+='<button class="btn sm" data-act="o-next" data-id="'+o.id+'">Préparer</button>';
     if(o.statut==='En préparation')btns+='<button class="btn sm" data-act="o-next" data-id="'+o.id+'">Marquer prête</button>';
     if(o.statut==='Prête')btns+='<button class="btn green sm" data-act="o-encaisser" data-id="'+o.id+'">Livrer et encaisser</button>';
-    if(o.statut!=='Livrée'&&o.statut!=='Annulée')btns+='<button class="btn ghost sm" data-act="o-bl" data-id="'+o.id+'">Bon de livraison</button><button class="btn ghost sm" data-act="o-cancel" data-id="'+o.id+'">Annuler</button>';
+    if(o.statut!=='Livrée'&&o.statut!=='Annulée')btns+='<button class="btn ghost sm" data-act="o-pf" data-id="'+o.id+'">Pro forma</button><button class="btn ghost sm" data-act="o-bl" data-id="'+o.id+'">Bon de livraison</button><button class="btn ghost sm" data-act="o-fin" data-id="'+o.id+'">Facture</button><button class="btn ghost sm" data-act="o-cancel" data-id="'+o.id+'">Annuler</button>';
     if(o.statut==='Annulée'||o.statut==='Livrée')btns+='<button class="btn ghost sm bad" data-act="o-del" data-id="'+o.id+'" data-confirm>Supprimer</button>';
     if(o.venteId)btns+='<button class="btn ghost sm" data-act="facture" data-id="'+o.venteId+'">Facture</button>';
     if(o.tel){
@@ -1710,6 +1714,29 @@ function jpegInfo(dataUrl){
   if(!w||!h)throw new Error('jpeg');
   return{bin:bin,w:w,h:h};
 }
+function numWords(n){
+  if(n===0)return 'zéro';
+  var U=['','un','deux','trois','quatre','cinq','six','sept','huit','neuf','dix','onze','douze','treize','quatorze','quinze','seize','dix-sept','dix-huit','dix-neuf'],T=['','','vingt','trente','quarante','cinquante','soixante'];
+  function b100(x,fin){
+    if(x<20)return U[x];
+    var d=Math.floor(x/10),u=x%10;
+    if(d===7||d===9){var r=(d===7?10:10)+u;return (d===7?'soixante':'quatre-vingt')+(d===7?(u===1?' et ':'-'):'-')+U[r]}
+    if(d===8)return u?'quatre-vingt-'+U[u]:'quatre-vingts'.replace(/s$/,fin?'s':'');
+    return T[d]+(u===1?' et un':u?'-'+U[u]:'');
+  }
+  function b1000(x,fin){
+    var h=Math.floor(x/100),r=x%100,s='';
+    if(h)s=(h>1?U[h]+' ':'')+'cent'+(h>1&&!r&&fin?'s':'');
+    if(r)s+=(s?' ':'')+b100(r,fin);
+    return s;
+  }
+  var parts=[],g=Math.floor(n/1e9),m=Math.floor(n%1e9/1e6),k=Math.floor(n%1e6/1000),r=n%1000;
+  if(g)parts.push(b1000(g,false)+' milliard'+(g>1?'s':''));
+  if(m)parts.push(b1000(m,false)+' million'+(m>1?'s':''));
+  if(k)parts.push(k===1?'mille':b1000(k,false)+' mille');
+  if(r)parts.push(b1000(r,true));
+  return parts.join(' ');
+}
 function makePDF(s,opt){
   opt=opt||{};var _an=!!(s.annulee&&s.orig);if(_an)s=Object.assign({},s,s.orig,{annulee:true});
   var W=595,H=842,M=36,P=[],c='',y=0;
@@ -1724,53 +1751,107 @@ function makePDF(s,opt){
   var money2=function(n){return nf.format(Math.round(n||0)).replace(/ /g,' ')+' FCFA'};
   var num2=function(n){return nf.format(Math.round(n||0)).replace(/ /g,' ')};
   var newPage=function(){if(c)P.push(c);c=''};
-  /* header */
-  rect(0,0,W,86,K.ink);
-  var tx=M;
-  if(img){var ih=52,iw=Math.min(90,img.w/img.h*ih);c+='q '+iw.toFixed(1)+' 0 0 '+ih+' '+M+' '+(H-17-ih)+' cm /Im1 Do Q\n';tx=M+iw+14}
-  txt(tx,38,reglages.nom||'Niger Épices',20,true,K.wh);
-  var sub=[reglages.adresse,reglages.tel].filter(Boolean).join('  ·  ');if(sub)txt(tx,54,fit(sub,330,false,9.5),9.5,false,[.85,.8,.72]);
-  if(reglages.nif)txt(tx,67,fit(reglages.nif,330,false,9),9,false,[.85,.8,.72]);
-  txt(W-M,38,opt.bl?'BON DE LIVRAISON':'FACTURE',opt.bl?15:20,true,K.gold,'r');
-  txt(W-M,54,'N° '+(s.numero||''),11,true,K.wh,'r');
-  txt(W-M,68,new Date(s.ts).toLocaleString('fr-FR',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}),9,false,[.85,.8,.72],'r');
-  band(86,14);
-  y=124;
+  /* mise en page « tableau » */
+  var kind=opt.bl?'bl':opt.pf?'pf':'f';
+  var BK=[.1,.1,.1],MINT=[.906,.937,.89],PINK=[.984,.89,.902];
+  var box=function(x,yy,w,h,fill){if(fill)rect(x,yy,w,h,fill);line(x,yy,x+w,yy,BK,.7);line(x,yy+h,x+w,yy+h,BK,.7);line(x,yy,x,yy+h,BK,.7);line(x+w,yy,x+w,yy+h,BK,.7)};
+  var d0=new Date(s.ts),dstr=d0.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'});
+  var TW=W-2*M,lw=130,iw2=232,tw2=TW-lw-iw2;
+  y=M;
+  box(M,y,lw,96);box(M+lw,y,iw2,96);
+  if(img){var ih=Math.min(60,(lw-20)*img.h/img.w),iw=ih*img.w/img.h;c+='q '+iw.toFixed(1)+' 0 0 '+ih.toFixed(1)+' '+(M+(lw-iw)/2).toFixed(1)+' '+(H-y-(96-ih)/2-ih).toFixed(1)+' cm /Im1 Do Q\n'}
+  var ad1=reglages.adresse||'',ad2='';if(tw(ad1,false,9)>iw2-20){var wds=ad1.split(' ');ad1='';while(wds.length&&tw((ad1+' '+wds[0]).trim(),false,9)<=iw2-20)ad1=(ad1+' '+wds.shift()).trim();ad2=wds.join(' ')}
+  var il=[[reglages.nom||'Niger Épices',true,12.5],[ad1,false,9],[ad2,false,9],[reglages.tel?'Tél : '+reglages.tel:'',false,9],[reglages.email,false,9],[reglages.nif,false,9]].filter(function(a){return a[0]});
+  il.forEach(function(a,i){txt(M+lw+10,y+19+i*15,fit(a[0],iw2-20,a[1],a[2]),a[2],a[1],K.fg)});
+  var tt=kind==='bl'?'BON DE LIVRAISON':kind==='pf'?'FACTURE PRO FORMA':'FACTURE',ts_=kind==='f'?16:12;
+  box(M+lw+iw2,y,tw2,36,K.grn);txt(M+lw+iw2+tw2/2,y+23,tt,ts_,true,K.wh,'c');
+  box(M+lw+iw2,y+36,tw2,30);txt(M+lw+iw2+8,y+55,'N° ',9.5,true,K.fg);txt(M+lw+iw2+8+tw('N° ',true,9.5),y+55,fit(s.numero||'',tw2-40,false,9.5),9.5,false,K.fg);
+  box(M+lw+iw2,y+66,tw2,30);txt(M+lw+iw2+8,y+85,'Date ',9.5,true,K.fg);txt(M+lw+iw2+8+tw('Date ',true,9.5),y+85,dstr,9.5,false,K.fg);
+  y+=96;
   /* client */
-  var cl=cById(s.clientId);
-  rect(M,y-14,W-2*M,40,K.bg);
-  txt(M+10,y+1,'FACTURÉ À',8,true,K.mut);
-  txt(M+10,y+17,fit(s.clientNom,300,true,13),13,true,K.fg);
-  if(cl&&cl.tel)txt(W-M-10,y+17,cl.tel,10,false,K.mut,'r');
-  if(s.type==='Gros')txt(W-M-10,y+1,'VENTE EN GROS',8,true,K.acc,'r');
-  y+=50;
-  var tableHead=function(){rect(M,y,W-2*M,22,K.ink);txt(M+10,y+15,'Désignation',9.5,true,K.wh);txt(335,y+15,'Quantité',9.5,true,K.wh,'r');txt(437,y+15,'Prix unitaire',9.5,true,K.wh,'r');txt(W-M-10,y+15,'Montant',9.5,true,K.wh,'r');y+=22};
+  var cl=cById(s.clientId),ctel=(cl&&cl.tel)||s.tel||'';
+  var rows=[['Client',s.clientNom,'Téléphone',ctel],['Type de vente',s.type==='Gros'?'Vente en gros':'Vente au détail','Vendeur',s.vendeur||'']];
+  if(kind==='f')rows.push(['Paiement',s.mode&&s.mode!=='—'?s.mode:'','Échéance','À réception']);
+  if(kind==='pf')rows.push(['Validité','15 jours','Échéance','—']);
+  var c1=80,c3=78,c4=118,c2=TW-c1-c3-c4;
+  rows.forEach(function(r){box(M,y,c1,20,MINT);box(M+c1,y,c2,20);box(M+c1+c2,y,c3,20,MINT);box(M+c1+c2+c3,y,c4,20);
+    txt(M+6,y+14,r[0],8.5,true,K.fg);txt(M+c1+6,y+14,fit(r[1],c2-12,false,9.5),9.5,false,K.fg);txt(M+c1+c2+6,y+14,r[2],8.5,true,K.fg);txt(M+c1+c2+c3+6,y+14,fit(r[3],c4-12,false,9.5),9.5,false,K.fg);y+=20});
+  y+=14;
+  /* tableau */
+  var cw=kind==='bl'?[28,247,70,60,122]:[28,205,62,50,80,102],cx=[M];cw.forEach(function(w){cx.push(cx[cx.length-1]+w)});
+  var heads=kind==='bl'?['N°','Désignation','Unité','Qté','Observations']:['N°','Désignation','Unité','Qté','Prix unitaire','Montant (FCFA)'];
+  var RH=22;
+  var tableHead=function(){heads.forEach(function(h,i){box(cx[i],y,cw[i],RH,K.ink);txt(i===1?cx[i]+8:cx[i]+cw[i]/2,y+15,h,9,true,K.wh,i===1?'l':'c')});y+=RH};
+  var row=function(i,l){
+    cw.forEach(function(w,j){box(cx[j],y,w,RH)});
+    if(l){
+      txt(cx[0]+cw[0]/2,y+15,String(i+1),9.5,false,K.fg,'c');
+      txt(cx[1]+8,y+15,fit(l.nom,cw[1]-14,true,9.5),9.5,true,K.fg);
+      txt(cx[2]+cw[2]/2,y+15,fit(l.unite||'',cw[2]-6,false,9),9,false,K.fg,'c');
+      txt(cx[3]+cw[3]/2,y+15,qf(l.qte),9.5,false,K.fg,'c');
+      if(kind!=='bl'){txt(cx[5]-8,y+15,num2(l.prix),9.5,false,K.fg,'r');txt(cx[6]-8,y+15,num2(l.qte*l.prix),9.5,true,K.fg,'r')}
+    }
+    y+=RH};
   tableHead();
-  s.lignes.forEach(function(l,i){
-    if(y>745){newPage();y=48;tableHead()}
-    if(i%2===0)rect(M,y,W-2*M,22,[.985,.972,.945]);
-    txt(M+10,y+15,fit(l.nom,235,false,10),10,false,K.fg);
-    txt(335,y+15,qf(l.qte)+' '+l.unite,10,false,K.fg,'r');
-    txt(437,y+15,num2(l.prix),10,false,K.fg,'r');
-    txt(W-M-10,y+15,num2(l.qte*l.prix),10,true,K.fg,'r');
-    y+=22;
-  });
-  line(M,y+2,W-M,y+2,K.lin,0.8);y+=14;
-  var need=110+(s.remise>0?18:0)+(dette(s)>0?22:0)+(pays(s).length>1?18*pays(s).length:0)+(s.rendu>0?36:0);
-  if(y+need>800){newPage();y=48}
-  var lab=function(t,v,bold,k){txt(380,y,t,10,!!bold,k||K.mut);txt(W-M-10,y,v,10,!!bold,k||K.fg,'r');y+=18};
-  if(s.remise>0){lab('Sous-total',money2(s.sous_total||sumBy(s.lignes,function(l){return l.qte*l.prix})));lab('Remise','- '+money2(s.remise))}
-  rect(370,y-14,W-M-370,28,K.ink);
-  txt(380,y+4,'TOTAL',12,true,K.gold);txt(W-M-10,y+4,money2(s.total),13,true,K.wh,'r');y+=36;
-  if(pays(s).length>1){pays(s).forEach(function(p,i){lab('Paiement '+(i+1)+' · '+fdstr(p.date),money2(p.montant))});lab('Total payé',money2(s.paye),true)}else lab('Payé ('+s.mode+')',money2(s.paye));
-  if(s.rendu>0){lab('Montant remis',money2(s.remis));lab('Monnaie rendue',money2(s.rendu))}
-  if(dette(s)>0){txt(380,y,'Reste à payer',11,true,K.acc);txt(W-M-10,y,money2(dette(s)),11,true,K.acc,'r');y+=22}
-  y+=8;
-  txt(M,y,'Vendeur : '+(s.vendeur||'—'),9.5,false,K.mut);
-  if(_an)txt(W/2,y+110,'FACTURE ANNULÉE',30,true,K.acc,'c');
-  if(reglages.pied){txt(W/2,y+34,fit(reglages.pied,W-2*M,true,11),11,true,K.grn,'c')}
-  (function(){var cl=coordLines();rect(M,H-74,W-2*M,0.8,K.lin||K.mut);cl.forEach(function(t,i){txt(W/2,H-60+i*13,fit(t,W-2*M,false,8.5),8.5,false,K.mut,'c')})})();
-  band(H-18,18);
+  var PL=kind==='f'?pays(s):[],EL=[];if(kind==='f'){try{EL=echList(s).filter(function(x){return x.st!=='ok'})}catch(e){EL=[]}}
+  var ls=s.lignes,minRows=kind==='bl'?10:(PL.length||EL.length)?3:8;
+  ls.forEach(function(l,i){if(y>H-110){newPage();y=48;tableHead()}row(i,l)});
+  for(var e=ls.length;e<minRows;e++){if(y>H-300)break;row(e,null)}
+  y+=14;
+  /* totaux */
+  var nrows=kind==='bl'?0:((s.remise>0?2:0)+1+(kind==='f'?((pays(s).length>1?pays(s).length:0)+1+(s.rendu>0?2:0)+(dette(s)>0?1:0)):0));
+  var need=(PL.length?22*(PL.length+1)+30:0)+(EL.length?22*(EL.length+1)+30:0)+nrows*22+(kind==='bl'?0:52)+(kind==='pf'?34:0)+70+30;
+  if(y+need>H-80){newPage();y=48}
+  var tx0=W-M-215,lw2=105,vw2=110;
+  var trow=function(t,v,lf,vf,tk,vk,bold){box(tx0,y,lw2,22,lf);box(tx0+lw2,y,vw2,22,vf);txt(tx0+7,y+15,t,9.5,true,tk||K.fg);txt(tx0+lw2+vw2-7,y+15,v,9.5,!!bold,vk||K.fg,'r');y+=22};
+  var sub=s.sous_total||sumBy(s.lignes,function(l){return l.qte*l.prix});
+  if(kind!=='bl'){
+    if(s.remise>0){trow('Sous-total',num2(sub),MINT);trow('Remise','- '+num2(s.remise),MINT)}
+    trow('TOTAL',num2(s.total),K.ink,K.ink,K.gold,K.wh,true);
+    if(kind==='f'){
+      trow('Payé',num2(s.paye),MINT);
+      if(s.rendu>0){trow('Montant remis',num2(s.remis),MINT);trow('Monnaie rendue',num2(s.rendu),MINT)}
+      if(dette(s)>0)trow('Reste à payer',num2(dette(s)),PINK,null,K.acc,K.acc,true);
+    }
+    y+=12;
+    var ww=numWords(Math.round(s.total))+' francs CFA';
+    box(M,y,TW,26);txt(M+8,y+17,fit((kind==='pf'?'Arrêté le présent pro forma à la somme de : ':'Arrêtée la présente facture à la somme de : ')+ww,TW-16,false,9),9,false,K.fg);
+    y+=40;
+    if(PL.length){
+      txt(M,y+2,'HISTORIQUE DES PAIEMENTS',9,true,K.grn);y+=8;
+      var pw=[28,92,110,125,86,86],px=[M];pw.forEach(function(w){px.push(px[px.length-1]+w)});
+      ['N°','Date','Mode','Référence','Montant','Reste à payer'].forEach(function(h,i){box(px[i],y,pw[i],20,K.ink);txt(px[i]+pw[i]/2,y+14,h,8.5,true,K.wh,'c')});y+=20;
+      var cum=0;
+      PL.forEach(function(p,i){cum+=p.montant;var rest=Math.max(0,s.total-cum);
+        pw.forEach(function(w,j){box(px[j],y,w,20)});
+        txt(px[0]+pw[0]/2,y+14,String(i+1),9,false,K.fg,'c');
+        txt(px[1]+pw[1]/2,y+14,p.date?new Date(p.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}):'',9,false,K.fg,'c');
+        txt(px[2]+6,y+14,fit(p.mode||'',pw[2]-12,false,9),9,false,K.fg);
+        txt(px[3]+6,y+14,fit((p.recu||'')+(p.note?(p.recu?' · ':'')+p.note:''),pw[3]-12,false,8.5),8.5,false,K.mut);
+        txt(px[5]-6,y+14,num2(p.montant),9,true,K.fg,'r');
+        txt(px[6]-6,y+14,num2(rest),9,true,rest>0?K.acc:K.grn,'r');
+        y+=20});
+      y+=16;
+    }
+    if(EL.length){
+      txt(M,y+2,'ÉCHÉANCES À VENIR',9,true,K.grn);y+=8;
+      var ew=[28,110,110,110],ex=[M];ew.forEach(function(w){ex.push(ex[ex.length-1]+w)});
+      ['N°','Date limite','Montant prévu','Situation'].forEach(function(h,i){box(ex[i],y,ew[i],20,K.ink);txt(ex[i]+ew[i]/2,y+14,h,8.5,true,K.wh,'c')});y+=20;
+      EL.forEach(function(x,i){ew.forEach(function(w,j){box(ex[j],y,w,20)});
+        txt(ex[0]+ew[0]/2,y+14,String(i+1),9,false,K.fg,'c');
+        txt(ex[1]+ew[1]/2,y+14,new Date(x.e.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}),9,false,K.fg,'c');
+        txt(ex[3]-8,y+14,num2(Math.max(0,x.e.montant-(x.pd||0))),9,true,K.fg,'r');
+        txt(ex[3]+ew[3]/2,y+14,x.st==='late'?'En retard':'À venir',9,true,x.st==='late'?K.acc:K.fg,'c');
+        y+=20});
+      y+=16;
+    }
+  }
+  if(kind==='pf'){box(M,y-14,TW,24,K.bg);txt(M+8,y+2,'Ce document n’est pas une facture. Il n’a pas valeur de paiement ; validité 15 jours.',9,true,K.acc);y+=34}
+  var sg=kind==='bl'?['Livré par (nom et signature)','Reçu par (nom et signature)']:kind==='pf'?['Cachet et signature du vendeur','Bon pour accord du client']:['Cachet et signature du vendeur','Signature du client (bon pour accord)'];
+  box(M,y,TW/2,70);box(M+TW/2,y,TW/2,70);txt(M+8,y+14,sg[0],9,false,K.fg);txt(M+TW/2+8,y+14,sg[1],9,false,K.fg);
+  if(_an)txt(W/2,y-60,'FACTURE ANNULÉE',30,true,K.acc,'c');
+  if(reglages.pied&&y+70<H-100){txt(W/2,y+92,fit(reglages.pied,TW,true,10),10,true,K.grn,'c')}
+  (function(){var cl2=coordLines();rect(M,H-76,TW,2.5,K.grn);cl2.forEach(function(t,i){txt(W/2,H-60+i*13,fit(t,TW,false,8.5),8.5,false,K.mut,'c')})})();
   newPage();
   /* assemble PDF objects */
   var out='%PDF-1.4\n%\xE2\xE3\xCF\xD3\n',offs=[],add=function(id,body){offs[id]=out.length;out+=id+' 0 obj\n'+body+'\nendobj\n'};
@@ -2145,7 +2226,7 @@ function factureHTML(s){
   return '<div class="fact"><svg class="band" aria-hidden="true"><rect width="100%" height="100%" fill="url(#pz)"/></svg><div class="fbody"><div class="fh">'+(reglages.logo?'<img class="flogo" src="'+reglages.logo+'" alt="">':'')+'<div class="grow"><h3>'+esc(reglages.nom)+'</h3><div class="muted">'+esc(reglages.adresse)+(reglages.tel?' · '+esc(reglages.tel):'')+'</div>'+(reglages.nif?'<div class="muted">'+esc(reglages.nif)+'</div>':'')+'</div><div class="fn"><strong>FACTURE</strong><span>N° '+esc(s.numero||'')+'</span><span class="muted">'+fdatetime(s.ts)+'</span></div></div>'+
   '<div><span class="muted">Client :</span> <strong>'+esc(s.clientNom)+'</strong>'+(c&&c.tel?' · '+esc(c.tel):'')+(s.type==='Gros'?' <span class="badge">Vente en gros</span>':'')+'</div>'+
   '<div class="tbl"><table><thead><tr><th>Désignation</th><th class="r">Qté</th><th class="r">Prix</th><th class="r">Montant</th></tr></thead><tbody>'+s.lignes.map(function(l){return '<tr><td>'+esc(l.nom)+'</td><td class="r">'+qf(l.qte)+' '+esc(l.unite)+'</td><td class="r">'+nf.format(l.prix).replace(/ /g,' ')+'</td><td class="r">'+nf.format(Math.round(l.qte*l.prix)).replace(/ /g,' ')+'</td></tr>'}).join('')+'</tbody></table></div>'+
-  '<div class="ftot">'+(s.remise>0?'<div><span>Remise</span><span>− '+money(s.remise)+'</span></div>':'')+'<div class="big"><span>Total</span><span>'+money(s.total)+'</span></div>'+(pays(s).length>1?pays(s).map(function(p,i){return '<div><span>Paiement '+(i+1)+' · '+fdstr(p.date)+'</span><span>'+money(p.montant)+'</span></div>'}).join('')+'<div><span>Total payé</span><span>'+money(s.paye)+'</span></div>':'<div><span>Payé ('+esc(s.mode)+')</span><span>'+money(s.paye)+'</span></div>')+(s.rendu>0?'<div><span>Montant remis</span><span>'+money(s.remis)+'</span></div><div><span>Monnaie rendue</span><span>'+money(s.rendu)+'</span></div>':'')+''+((s.retours||[]).map(function(r){return '<div><span>Retour du '+fdstr(r.date)+' ('+esc(r.mode==='Aucun'?'échange':r.mode)+')</span><span>− '+money(r.montant)+'</span></div>'}).join(''))+(dette(s)>0?'<div><strong>Reste à payer</strong><strong>'+money(dette(s))+'</strong></div>':'')+'</div>'+
+  '<div class="ftot">'+(s.remise>0?'<div><span>Remise</span><span>− '+money(s.remise)+'</span></div>':'')+'<div class="big"><span>Total</span><span>'+money(s.total)+'</span></div>'+(pays(s).length>1?pays(s).map(function(p,i){return '<div><span>Paiement '+(i+1)+' · '+fdstr(p.date)+'</span><span>'+money(p.montant)+' · reste '+money(resteApres(s,p))+'</span></div>'}).join('')+'<div><span>Total payé</span><span>'+money(s.paye)+'</span></div>':'<div><span>Payé ('+esc(s.mode)+')</span><span>'+money(s.paye)+'</span></div>')+(s.rendu>0?'<div><span>Montant remis</span><span>'+money(s.remis)+'</span></div><div><span>Monnaie rendue</span><span>'+money(s.rendu)+'</span></div>':'')+''+((s.retours||[]).map(function(r){return '<div><span>Retour du '+fdstr(r.date)+' ('+esc(r.mode==='Aucun'?'échange':r.mode)+')</span><span>− '+money(r.montant)+'</span></div>'}).join(''))+(dette(s)>0?'<div><strong>Reste à payer</strong><strong>'+money(dette(s))+'</strong></div>':'')+'</div>'+
   '<div class="muted" style="font-size:13px">Vendeur : '+esc(s.vendeur||'—')+'</div>'+(reglages.pied?'<p class="fpied">'+esc(reglages.pied)+'</p>':'')+'<div class="fcoord">'+coordLines().map(esc).join('<br>')+'</div></div></div>';
 }
 function waHref(s,phone){var n=waNum(phone);return 'https://wa.me/'+n+'?text='+encodeURIComponent(factureText(s))}
@@ -2295,6 +2376,17 @@ async function majCatalogue2(){
   try{localStorage.setItem('ne-maj-2','1')}catch(e){}
   if(nu){logAct('Produits ajoutés',nu+' nouveau(x) produit(s) du catalogue');toast(nu+' nouveau(x) produit(s) ajouté(s)')}
 }
+async function majCatalogue3(){
+  if(localStorage.getItem('ne-maj-3')||data.produits.length<40)return;
+  var list;try{var r=await fetch('catalogue-maj.json',{cache:'no-store'});if(!r.ok)return;list=await r.json()}catch(e){return}
+  var nu=0,up=0;
+  for(var i=0;i<list.length;i++){var x=list[i];if(!x.maj3)continue;var k=x.nom.trim().toLowerCase();
+    var p=data.produits.find(function(q){return (q.nom||'').trim().toLowerCase()===k});
+    if(p){var o=Object.assign({},p,{photo:x.photo});if(/^maj1-/.test(p.id)&&!(p.stock>0))o.stock=100;await S.put('produits',o);up++}
+    else{await S.put('produits',{id:'maj1-'+k.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-'),nom:x.nom,cat:x.cat,unite:x.unite,format:x.format,prix:x.prix,prix_gros:x.prix_gros,prix_web:x.prix_web,cout:x.cout,stock:100,seuil:0,code:'',paliers:[],desc:x.desc||'',archive:false,photo:x.photo||''});nu++}}
+  try{localStorage.setItem('ne-maj-3','1')}catch(e){}
+  if(up||nu){logAct('Photos et produits ajoutés',up+' photo(s), '+nu+' nouveau(x) produit(s)');toast(up+' photo(s) ajoutée(s), '+nu+' produit(s) créé(s)')}
+}
 async function autoDepart(){
   try{
     if(/^niger [ée]pice$/i.test(String(reglages.nom||'').trim())){await S.setReglages({nom:'Niger Épices'});if(typeof render==='function')render()}
@@ -2306,6 +2398,7 @@ async function autoDepart(){
     await majCatalogue();
     await majPhotos();
     await majCatalogue2();
+    await majCatalogue3();
   }catch(e){}
 }
 async function unseed(){var ids=data.produits.filter(function(p){return p.exemple}).map(function(p){return p.id});for(var i=0;i<ids.length;i++)await S.del('produits',ids[i]);toast('Exemples supprimés')}
@@ -2407,6 +2500,8 @@ document.addEventListener('click',async function(e){
     case 'restore-auto':{var sa=await idbGet(id);if(sa){applyState(sa);await flushSave();session=null;render();toast('Copie du '+fdstr(id.slice(5))+' restaurée')}break}
     case 'rapport-pdf':rapportPDF();break;
     case 'o-bl':{var ob=data.commandes.find(function(x){return x.id===id});if(ob)deliverPDF(makePDF(blOrder(ob),{bl:true}),'Bon-de-livraison-'+slug(ob.clientNom)+'.pdf','Bon de livraison');break}
+    case 'o-pf':{var op=data.commandes.find(function(x){return x.id===id});if(op)deliverPDF(makePDF(blOrder(op,'pf'),{pf:true}),'Pro-forma-'+slug(op.clientNom)+'.pdf','Facture pro forma');break}
+    case 'o-fin':{var of_=data.commandes.find(function(x){return x.id===id});if(of_)deliverPDF(makePDF(blOrder(of_,'f')),'Facture-'+slug(of_.clientNom)+'.pdf','Facture');break}
     case 'cat':ui.cat=v;render();break;
     case 'pcat':ui.pcat=v;render();break;
     case 'ostat':ui.ostat=v;render();break;
