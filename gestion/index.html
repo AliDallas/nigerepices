@@ -1279,10 +1279,29 @@ function docPDF(o){
   foot();P.push(c);
   return pdfAssemble(P,img,W,H);
 }
-function deliverPDF(blob,name,title){
-  var f=null;try{f=new File([blob],name,{type:'application/pdf'})}catch(e){}
-  if(f&&navigator.canShare&&navigator.canShare({files:[f]})){navigator.share({files:[f],title:title||name}).catch(function(){});return}
-  downloadBlob(name,blob);toast('PDF enregistré');
+var docCur=null;
+function deliverPDF(blob,name,title,tel,msg){
+  if(docCur&&docCur.url){try{URL.revokeObjectURL(docCur.url)}catch(e){}}
+  docCur={blob:blob,name:name,title:title||name,url:URL.createObjectURL(blob),msg:msg||''};
+  modal('<h2>'+esc(title||name)+'</h2><p class="muted">'+esc(name)+'</p><div class="actions"><button class="btn green" data-act="doc-print">Imprimer</button><button class="btn" data-act="doc-save">Enregistrer le PDF</button><button class="btn ghost" data-act="doc-open">Ouvrir</button></div><label>Envoyer par WhatsApp : numéro du client<input id="m-dwa" class="in" type="tel" inputmode="tel" value="'+esc(tel||'')+'" placeholder="Ex. 70 00 00 00"></label><div class="actions"><button class="btn green" data-act="doc-wa">WhatsApp</button><span class="sp"></span><button class="btn ghost" data-act="close">Fermer</button></div><p class="muted" style="font-size:12.5px">Imprimer ouvre le PDF et lance l’impression. Si la fenêtre d’impression n’apparaît pas, utilisez Ctrl+P dans l’onglet qui s’ouvre. Sur téléphone, WhatsApp joint directement le PDF.</p>');
+}
+function docAction(act){
+  if(!docCur)return;
+  if(act==='doc-save'){downloadBlob(docCur.name,docCur.blob);toast('PDF enregistré');return}
+  if(act==='doc-open'||act==='doc-print'){
+    var w=window.open(docCur.url,'_blank');
+    if(!w){downloadBlob(docCur.name,docCur.blob);toast('PDF enregistré : ouvrez-le pour l’imprimer');return}
+    if(act==='doc-print')setTimeout(function(){try{w.focus();w.print()}catch(e){}},1200);
+    return;
+  }
+  if(act==='doc-wa'){
+    var f=null;try{f=new File([docCur.blob],docCur.name,{type:'application/pdf'})}catch(e){}
+    if(f&&navigator.canShare&&navigator.canShare({files:[f]})){navigator.share({files:[f],title:docCur.title,text:docCur.msg||docCur.title}).catch(function(){});return}
+    downloadBlob(docCur.name,docCur.blob);
+    var n=waNum(val('m-dwa'));
+    window.open(n?'https://wa.me/'+n+'?text='+encodeURIComponent(docCur.msg||docCur.title):'https://web.whatsapp.com/','_blank');
+    toast('PDF enregistré. Joignez-le dans la conversation WhatsApp.');
+  }
 }
 function slug(s){return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Za-z0-9]+/g,'-').replace(/^-|-$/g,'')||'x'}
 function releveClient(id){
@@ -2471,6 +2490,7 @@ document.addEventListener('click',async function(e){
     case 'ctab':ui.ctab=v;render();window.scrollTo(0,0);break;
     case 'sync-save':{SYNC.bin=val('s-bin').trim();SYNC.key=val('s-key').trim();SYNC.err='';saveSyncCfg();if(!SYNC.bin||!SYNC.key){toast('Consultation à distance désactivée');updateChips();break}if(!window._pi)window._pi=setInterval(function(){if(syncPending)pushSnapshot()},120000);var ok=await pushSnapshot();toast(ok?'Envoyé. Le téléphone peut consulter.':'Envoi impossible : '+SYNC.err,ok?'':'bad');break}
     case 'pdf-send':sendPDF();break;
+    case 'doc-print':case 'doc-save':case 'doc-open':case 'doc-wa':docAction(a);break;
     case 'pdf-dl':if(curFact){downloadBlob(pdfName(curFact),makePDF(curFact));toast('PDF enregistré')}break;
     case 'pdf-open':if(curFact){var u0=URL.createObjectURL(makePDF(curFact));window.open(u0,'_blank')||downloadBlob(pdfName(curFact),makePDF(curFact))}break;
     case 'do-restore':{var j=pendingRestore;if(!j)break;applyState(j);await flushSave();logAct('Sauvegarde restaurée','');pendingRestore=null;session=null;closeModal();render();toast('Sauvegarde restaurée');break}
@@ -2499,9 +2519,9 @@ document.addEventListener('click',async function(e){
     case 'show-recu':{var dr=data.depenses.find(function(x){return x.id===id});if(dr&&dr.recu)modal('<h2>'+esc(dr.libelle||dr.cat)+'</h2><img src="'+dr.recu+'" alt="Reçu" style="width:100%;border-radius:14px"><div class="actions"><span class="sp"></span><button class="btn" data-act="close">Fermer</button></div>');break}
     case 'restore-auto':{var sa=await idbGet(id);if(sa){applyState(sa);await flushSave();session=null;render();toast('Copie du '+fdstr(id.slice(5))+' restaurée')}break}
     case 'rapport-pdf':rapportPDF();break;
-    case 'o-bl':{var ob=data.commandes.find(function(x){return x.id===id});if(ob)deliverPDF(makePDF(blOrder(ob),{bl:true}),'Bon-de-livraison-'+slug(ob.clientNom)+'.pdf','Bon de livraison');break}
-    case 'o-pf':{var op=data.commandes.find(function(x){return x.id===id});if(op)deliverPDF(makePDF(blOrder(op,'pf'),{pf:true}),'Pro-forma-'+slug(op.clientNom)+'.pdf','Facture pro forma');break}
-    case 'o-fin':{var of_=data.commandes.find(function(x){return x.id===id});if(of_)deliverPDF(makePDF(blOrder(of_,'f')),'Facture-'+slug(of_.clientNom)+'.pdf','Facture');break}
+    case 'o-bl':{var ob=data.commandes.find(function(x){return x.id===id});if(ob)deliverPDF(makePDF(blOrder(ob),{bl:true}),'Bon-de-livraison-'+slug(ob.clientNom)+'.pdf','Bon de livraison',ob.tel);break}
+    case 'o-pf':{var op=data.commandes.find(function(x){return x.id===id});if(op)deliverPDF(makePDF(blOrder(op,'pf'),{pf:true}),'Pro-forma-'+slug(op.clientNom)+'.pdf','Facture pro forma',op.tel,'Bonjour '+op.clientNom+', voici votre facture pro forma : '+money(blOrder(op,'pf').total)+'. '+(reglages.nom||''));break}
+    case 'o-fin':{var of_=data.commandes.find(function(x){return x.id===id});if(of_)deliverPDF(makePDF(blOrder(of_,'f')),'Facture-'+slug(of_.clientNom)+'.pdf','Facture',of_.tel,'Bonjour '+of_.clientNom+', voici votre facture : '+money(blOrder(of_,'f').total)+'. '+(reglages.nom||''));break}
     case 'cat':ui.cat=v;render();break;
     case 'pcat':ui.pcat=v;render();break;
     case 'ostat':ui.ostat=v;render();break;
