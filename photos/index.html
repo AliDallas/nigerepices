@@ -636,7 +636,7 @@ function thumbOf(url,px){
 }
 async function catBody(){
   var r=reglages,list=data.produits.filter(function(p){return !p.archive&&onWeb(p)&&webPrice(p)>0}),out=[];
-  for(var i=0;i<list.length;i++){var p=list[i],th=p.photo?await thumbOf(p.photo,200):'';out.push({id:p.id,nom:p.nom,cat:p.cat||'',unite:p.unite,prix:webPrice(p),stock:p.stock>0?1:0,desc:(p.desc||'').slice(0,400),fmt:p.format||'',photo:th,hd:!!(th&&p.photo.length<250000)})}
+  for(var i=0;i<list.length;i++){var p=list[i],th=p.photo?await thumbOf(p.photo,200):'';out.push({id:p.id,nom:p.nom,cat:p.cat||'',unite:p.unite,prix:webPrice(p),gros:priceOf(p,'Gros'),stock:p.stock>0?1:0,desc:(p.desc||'').slice(0,400),fmt:p.format||'',photo:th,hd:!!(th&&p.photo.length<250000)})}
   return {boutique:{nom:r.nom||'',tel:r.tel||'',adresse:r.adresse||'',email:r.email||'',wa:digits(r.bq_wa),msg:r.bq_msg||'',liv:r.bq_liv||'',logo:(r.logo&&r.logo.length<60000)?r.logo:'',delivery:{mode:r.bq_liv_mode||'gratuit',fixe:Math.max(0,num(r.bq_liv_fixe)),franco:Math.max(0,num(r.bq_liv_franco)),zones:parseZones(r.bq_liv_zones)}},produits:out};
 }
 async function webPublish(manual){
@@ -673,15 +673,15 @@ function webOrderRec(id,o){
   (o.lignes||[]).slice(0,60).forEach(function(l){
     var q=Math.min(500,Math.max(0,+l.qte||0));if(q<=0)return;
     var p=pById(l.pid);
-    if(p)L.push({pid:p.id,nom:p.nom,cat:p.cat||'',qte:q,unite:p.unite,prix:webPrice(p),cout:p.cout||0});
+    if(p)L.push({pid:p.id,nom:p.nom,cat:p.cat||'',qte:q,unite:p.unite,prix:(o.acces==='pro'?priceOf(p,'Gros'):webPrice(p)),cout:p.cout||0});
     else{hors=true;L.push({pid:'',nom:String(l.nom||'Produit').slice(0,80),cat:'',qte:q,unite:String(l.unite||'').slice(0,20),prix:Math.max(0,+l.prix||0),cout:0})}
   });
   var tel=String(o.tel||'').slice(0,30),cl=data.clients.find(function(c){return digits(c.tel).slice(-8)&&digits(c.tel).slice(-8)===digits(tel).slice(-8)});
   var items=sumBy(L,function(l){return l.qte*l.prix}),zone=String(o.zone||'').slice(0,60),frais=0,fe=false;
   if(o.mode==='livraison'){var ff=feeFor(zone,items);if(ff===null){frais=Math.max(0,+o.frais||0);fe=true}else{frais=ff;if(Math.round(frais)!==Math.round(+o.frais||0))fe=true}}
   var total=items+frais;
-  var note=['Commande web '+String(o.ref||'').slice(0,24),o.mode==='livraison'?'Livraison':'Retrait en boutique',String(o.note||'').slice(0,300)].filter(Boolean).join(' · ');
-  return {id:id,ts:+o.ts||Date.now(),date:today(),clientId:cl?cl.id:'',clientNom:cl?cl.nom:String(o.nom||'Client web').slice(0,80),tel:tel,adresse:String(o.adresse||'').slice(0,200),note:note,type:'Détail',lignes:L,total:total,frais:frais,zone:zone,modeLiv:o.mode==='livraison'?'livraison':'retrait',livraison:/^\d{4}-\d{2}-\d{2}$/.test(o.liv||'')?o.liv:'',acompte:0,statut:'Nouvelle',web:true,ref:String(o.ref||'').slice(0,24),ecart:hors||fe||Math.round(total)!==Math.round(+o.total||0)};
+  var note=['Commande web '+String(o.ref||'').slice(0,24),o.acces==='pro'?'Accès professionnel (prix de gros)':'',o.mode==='livraison'?'Livraison':'Retrait en boutique',String(o.note||'').slice(0,300)].filter(Boolean).join(' · ');
+  return {id:id,ts:+o.ts||Date.now(),date:today(),clientId:cl?cl.id:'',clientNom:cl?cl.nom:String(o.nom||'Client web').slice(0,80),tel:tel,adresse:String(o.adresse||'').slice(0,200),note:note,type:(o.acces==='pro'?'Gros':'Détail'),lignes:L,total:total,frais:frais,zone:zone,modeLiv:o.mode==='livraison'?'livraison':'retrait',livraison:/^\d{4}-\d{2}-\d{2}$/.test(o.liv||'')?o.liv:'',acompte:0,statut:'Nouvelle',web:true,ref:String(o.ref||'').slice(0,24),ecart:hors||fe||Math.round(total)!==Math.round(+o.total||0)};
 }
 async function webPull(manual){
   if(!opsOn()||!reglages.bq_actif||webBusy)return 0;
@@ -876,7 +876,7 @@ function compressImage(file,max,q){
 /* ---------- helpers ---------- */
 function pById(id){return data.produits.find(function(p){return p.id===id})}
 function cById(id){return data.clients.find(function(c){return c.id===id})}
-function webPrice(p){return p.prix_web>0?p.prix_web:p.prix}
+function webPrice(p){return p.prix}
 function onWeb(p){return p.web!==false}
 function priceOf(p,type){return type==='Gros'?(p.prix_gros>0?p.prix_gros:p.prix):p.prix}
 function stepOf(p){return p.unite==='kg'?0.25:1}
@@ -1516,7 +1516,7 @@ function plistHTML(){
   var list=data.produits.filter(function(p){return (ui.parch?!!p.archive:!p.archive)&&(ui.pcat==='Toutes'||p.cat===ui.pcat)&&(norm(p.nom).indexOf(norm(ui.pq))>=0||(p.code&&p.code===ui.pq.trim()))}).sort(function(a,b){return a.nom.localeCompare(b.nom,'fr')});
   return list.map(function(p){
     var mg=p.prix>0?Math.round((p.prix-(p.cout||0))/p.prix*100):0,mgg=priceOf(p,'Gros')>0?Math.round((priceOf(p,'Gros')-(p.cout||0))/priceOf(p,'Gros')*100):0,low=p.stock<=p.seuil;
-    return '<div class="row">'+imgOf(p,'thumb')+'<div class="grow"><strong>'+esc(p.nom)+'</strong>'+(p.exemple?' <span class="badge">Exemple</span>':'')+(p.archive?' <span class="badge">Archivé</span>':'')+(!onWeb(p)?' <span class="badge">Magasin seulement</span>':(p.prix_web>0&&p.prix_web!==p.prix?' <span class="badge" style="background:var(--gold);color:#1B1B1B">Web '+money(p.prix_web)+'</span>':''))+' '+expBadge(p)+'<div class="muted">'+esc(p.cat||'Sans catégorie')+' · détail '+money(p.prix)+' · gros '+money(priceOf(p,'Gros'))+' / '+esc(p.unite)+((p.paliers||[]).length?' · dégressif dès '+qf(p.paliers[0].q):'')+'</div><div class="muted">Achat '+money(p.cout||0)+' · marge '+mg+' % détail, '+mgg+' % gros'+(p.code?' · code '+esc(p.code):'')+'</div></div><span class="badge '+(p.stock<=0?'bad':low?'low':'ok')+'">'+(p.stock<=0?'Rupture':qf(p.stock)+' '+esc(p.unite))+'</span><button class="btn ghost sm" data-act="edit-produit" data-id="'+p.id+'">Modifier</button></div>';
+    return '<div class="row">'+imgOf(p,'thumb')+'<div class="grow"><strong>'+esc(p.nom)+'</strong>'+(p.exemple?' <span class="badge">Exemple</span>':'')+(p.archive?' <span class="badge">Archivé</span>':'')+(!onWeb(p)?' <span class="badge">Magasin seulement</span>':'')+' '+expBadge(p)+'<div class="muted">'+esc(p.cat||'Sans catégorie')+' · détail '+money(p.prix)+' · gros '+money(priceOf(p,'Gros'))+' / '+esc(p.unite)+((p.paliers||[]).length?' · dégressif dès '+qf(p.paliers[0].q):'')+'</div><div class="muted">Achat '+money(p.cout||0)+' · marge '+mg+' % détail, '+mgg+' % gros'+(p.code?' · code '+esc(p.code):'')+'</div></div><span class="badge '+(p.stock<=0?'bad':low?'low':'ok')+'">'+(p.stock<=0?'Rupture':qf(p.stock)+' '+esc(p.unite))+'</span><button class="btn ghost sm" data-act="edit-produit" data-id="'+p.id+'">Modifier</button></div>';
   }).join('')||'<p class="muted">Aucun produit trouvé.</p>';
 }
 function vProduits(){
@@ -2145,7 +2145,7 @@ function productModal(id){
   var cats=Array.from(new Set(DEFCATS.concat(data.produits.map(function(x){return x.cat}).filter(Boolean))));
   var fiche=p?data.productions.find(function(f){return f.pid===p.id}):null;
   var fnote=fiche?'<div class="note">Coût calculé dans Production : <strong>'+money(prodUnit(fiche))+'</strong> / '+esc(p.unite)+' <button class="btn ghost sm" type="button" data-act="prod-to-cout" data-id="'+fiche.id+'">Utiliser ce coût</button></div>':'';
-  modal('<h2>'+(p?'Modifier le produit':'Nouveau produit')+'</h2><div class="form g2"><label class="full">Photo'+photoBlock(p,'m-prev')+'</label><label class="full">Nom<input id="m-nom" class="in" value="'+esc(p?p.nom:'')+'" autocomplete="off"></label><label>Catégorie<input id="m-cat" class="in" list="m-cats" value="'+esc(p?p.cat:'')+'"><datalist id="m-cats">'+cats.map(function(c){return '<option value="'+esc(c)+'">'}).join('')+'</datalist></label><label>Unité de vente<select id="m-unite" class="in">'+UNITES.map(function(u){return '<option '+((p?p.unite:'kg')===u?'selected':'')+'>'+u+'</option>'}).join('')+'</select></label><label>Prix d’achat (FCFA)<input id="m-cout" data-in="pm" class="in" type="number" inputmode="decimal" min="0" step="any" placeholder="Ce que ça vous coûte" value="'+(p&&p.cout?p.cout:'')+'"></label><label>Prix de vente détail (FCFA)<input id="m-prix" data-in="pm" class="in" type="number" inputmode="decimal" min="0" step="any" value="'+(p?p.prix:'')+'"></label><label>Prix de gros (FCFA)<input id="m-gros" data-in="pm" class="in" type="number" inputmode="decimal" min="0" step="any" placeholder="Facultatif" value="'+(p&&p.prix_gros?p.prix_gros:'')+'"></label><label>'+(p?'Stock actuel':'Quantité arrivée')+'<input id="m-stock" class="in" type="number" inputmode="decimal" min="0" step="any" value="'+(p?p.stock:'')+'"></label><label class="full">Code-barres<div class="actions" style="flex-wrap:nowrap"><input id="m-code" class="in" style="flex:1" inputmode="numeric" autocomplete="off" placeholder="Scannez avec le lecteur ou tapez le code" value="'+esc(p?p.code||'':'')+'"><button class="btn ghost sm" type="button" data-act="cam-code">Caméra</button><button class="btn ghost sm" type="button" data-act="gen-code">Code interne</button>'+(p&&p.code?'<button class="btn ghost sm" type="button" data-act="labels" data-id="'+p.id+'">Étiquette</button>':'')+'</div></label></div>'+fnote+'<div class="form g2" style="margin-top:10px"><label class="chk full"><input id="m-web" type="checkbox" '+(!p||onWeb(p)?'checked':'')+'> Vendre aussi sur la boutique en ligne (décochez pour un produit vendu seulement au magasin)</label><label class="full">Prix sur la boutique en ligne (FCFA)<input id="m-webp" class="in" type="number" inputmode="decimal" min="0" step="any" value="'+(p&&p.prix_web>0?p.prix_web:'')+'" placeholder="Laisser vide : même prix qu’à la caisse"></label></div><div class="note" id="pm-info"></div><details class="more"><summary>Plus d’options</summary><div class="form g2" style="margin-top:10px"><label>Alerte stock bas<input id="m-seuil" class="in" type="number" inputmode="decimal" min="0" step="any" value="'+(p?p.seuil:'')+'"></label><label class="full">Description (affichée sur la boutique en ligne)<textarea id="m-desc" class="in" style="font-family:inherit" rows="3" maxlength="400">'+esc(p?p.desc||'':'')+'</textarea></label><label class="full">Prix dégressifs (quantité : prix), séparés par « ; »<input id="m-pal" class="in" autocomplete="off" placeholder="Ex. 5:5200; 20:4900" value="'+esc(p?palStr(p):'')+'"></label></div><label class="chk"><input id="m-arch" type="checkbox" '+(p&&p.archive?'checked':'')+'> Archiver ce produit (masqué de la caisse, l’historique est conservé)</label></details><p class="muted" style="font-size:13px">Il suffit d’indiquer le prix d’achat : pas besoin de détailler bouteilles et étiquettes. Pour calculer un coût de revient précis, utilisez l’onglet Production.</p><div class="actions">'+(p?'<button class="btn ghost bad" data-act="del-produit" data-id="'+p.id+'" data-confirm>Supprimer</button>':'')+'<span class="sp"></span><button class="btn ghost" data-act="close">Annuler</button><button class="btn" data-act="save-produit" data-id="'+(p?p.id:'')+'">Enregistrer</button></div>');
+  modal('<h2>'+(p?'Modifier le produit':'Nouveau produit')+'</h2><div class="form g2"><label class="full">Photo'+photoBlock(p,'m-prev')+'</label><label class="full">Nom<input id="m-nom" class="in" value="'+esc(p?p.nom:'')+'" autocomplete="off"></label><label>Catégorie<input id="m-cat" class="in" list="m-cats" value="'+esc(p?p.cat:'')+'"><datalist id="m-cats">'+cats.map(function(c){return '<option value="'+esc(c)+'">'}).join('')+'</datalist></label><label>Unité de vente<select id="m-unite" class="in">'+UNITES.map(function(u){return '<option '+((p?p.unite:'kg')===u?'selected':'')+'>'+u+'</option>'}).join('')+'</select></label><label>Prix d’achat (FCFA)<input id="m-cout" data-in="pm" class="in" type="number" inputmode="decimal" min="0" step="any" placeholder="Ce que ça vous coûte" value="'+(p&&p.cout?p.cout:'')+'"></label><label>Prix de vente détail (FCFA)<input id="m-prix" data-in="pm" class="in" type="number" inputmode="decimal" min="0" step="any" value="'+(p?p.prix:'')+'"></label><label>Prix de gros (FCFA)<input id="m-gros" data-in="pm" class="in" type="number" inputmode="decimal" min="0" step="any" placeholder="Facultatif" value="'+(p&&p.prix_gros?p.prix_gros:'')+'"></label><label>'+(p?'Stock actuel':'Quantité arrivée')+'<input id="m-stock" class="in" type="number" inputmode="decimal" min="0" step="any" value="'+(p?p.stock:'')+'"></label><label class="full">Code-barres<div class="actions" style="flex-wrap:nowrap"><input id="m-code" class="in" style="flex:1" inputmode="numeric" autocomplete="off" placeholder="Scannez avec le lecteur ou tapez le code" value="'+esc(p?p.code||'':'')+'"><button class="btn ghost sm" type="button" data-act="cam-code">Caméra</button><button class="btn ghost sm" type="button" data-act="gen-code">Code interne</button>'+(p&&p.code?'<button class="btn ghost sm" type="button" data-act="labels" data-id="'+p.id+'">Étiquette</button>':'')+'</div></label></div>'+fnote+'<div class="form g2" style="margin-top:10px"><label class="chk full"><input id="m-web" type="checkbox" '+(!p||onWeb(p)?'checked':'')+'> Vendre aussi sur la boutique en ligne (décochez pour un produit vendu seulement au magasin)</label></div><div class="note" id="pm-info"></div><details class="more"><summary>Plus d’options</summary><div class="form g2" style="margin-top:10px"><label>Alerte stock bas<input id="m-seuil" class="in" type="number" inputmode="decimal" min="0" step="any" value="'+(p?p.seuil:'')+'"></label><label class="full">Description (affichée sur la boutique en ligne)<textarea id="m-desc" class="in" style="font-family:inherit" rows="3" maxlength="400">'+esc(p?p.desc||'':'')+'</textarea></label><label class="full">Prix dégressifs (quantité : prix), séparés par « ; »<input id="m-pal" class="in" autocomplete="off" placeholder="Ex. 5:5200; 20:4900" value="'+esc(p?palStr(p):'')+'"></label></div><label class="chk"><input id="m-arch" type="checkbox" '+(p&&p.archive?'checked':'')+'> Archiver ce produit (masqué de la caisse, l’historique est conservé)</label></details><p class="muted" style="font-size:13px">Il suffit d’indiquer le prix d’achat : pas besoin de détailler bouteilles et étiquettes. Pour calculer un coût de revient précis, utilisez l’onglet Production.</p><div class="actions">'+(p?'<button class="btn ghost bad" data-act="del-produit" data-id="'+p.id+'" data-confirm>Supprimer</button>':'')+'<span class="sp"></span><button class="btn ghost" data-act="close">Annuler</button><button class="btn" data-act="save-produit" data-id="'+(p?p.id:'')+'">Enregistrer</button></div>');
   pmInfo();
 }
 function pmInfo(){
@@ -2238,6 +2238,25 @@ async function importDepart(auto){
   logAct('Catalogue importé',todo.length+' produits');
   toast(todo.length+' produits importés. Pensez à renseigner les codes-barres.');return true;
 }
+async function majPhotos(){
+  if(localStorage.getItem('ne-ph-1')||data.produits.length<40)return;
+  var list;try{var r=await fetch('catalogue-maj.json',{cache:'no-store'});if(!r.ok)return;list=await r.json()}catch(e){return}
+  var n=0;for(var i=0;i<list.length;i++){var x=list[i];if(!x.photo)continue;var p=data.produits.find(function(q){return (q.nom||'').trim().toLowerCase()===x.nom.trim().toLowerCase()});if(p&&!p.photo){await S.put('produits',Object.assign({},p,{photo:x.photo}));n++}}
+  try{localStorage.setItem('ne-ph-1','1')}catch(e){}
+  if(n)toast(n+' photo(s) ajoutée(s)')
+}
+async function majCatalogue(){
+  if(localStorage.getItem('ne-maj-1'))return;
+  if(data.produits.length<40)return;
+  var list;try{var r=await fetch('catalogue-maj.json',{cache:'no-store'});if(!r.ok)return;list=await r.json()}catch(e){return}
+  var by={};data.produits.forEach(function(p){by[(p.nom||'').trim().toLowerCase()]=p});
+  var nu=0,up=0;
+  for(var i=0;i<list.length;i++){var x=list[i],k=x.nom.trim().toLowerCase(),p=by[k];
+    if(p){var o=Object.assign({},p,{cat:x.cat,unite:x.unite,format:x.format,cout:x.cout,prix:x.prix,prix_gros:x.prix_gros,prix_web:x.prix_web,desc:x.desc||p.desc});await S.put('produits',o);up++}
+    else{await S.put('produits',{id:'maj1-'+k.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-'),nom:x.nom,cat:x.cat,unite:x.unite,format:x.format,prix:x.prix,prix_gros:x.prix_gros,prix_web:x.prix_web,cout:x.cout,stock:0,seuil:0,code:'',paliers:[],desc:x.desc||'',archive:false,photo:x.photo||''});nu++}}
+  try{localStorage.setItem('ne-maj-1','1')}catch(e){}
+  logAct('Catalogue mis à jour',up+' produits modifiés, '+nu+' ajoutés');toast('Catalogue mis à jour : '+up+' modifiés, '+nu+' ajoutés')
+}
 async function autoDepart(){
   try{
     if(/^niger [ée]pice$/i.test(String(reglages.nom||'').trim())){await S.setReglages({nom:'Niger Épices'});if(typeof render==='function')render()}
@@ -2245,8 +2264,9 @@ async function autoDepart(){
     if(!String(reglages.bq_wa||'').trim()){await S.setReglages({bq_wa:'22392693281'})}
     if(!String(reglages.tel||'').trim()&&!String(reglages.adresse||'').trim()){await S.setReglages({tel:'+223 92 69 32 81',adresse:'Niamana Attbougou, rond-point Assimi Goïta, Bamako'});if(typeof render==='function')render()}
     if(data.produits.some(function(p){return p.exemple}))await unseed();
-    if(localStorage.getItem('ne-depart')||data.produits.length||opsOn())return;
-    if(await importDepart(true))localStorage.setItem('ne-depart','1');
+    if(!(localStorage.getItem('ne-depart')||data.produits.length||opsOn())){if(await importDepart(true))localStorage.setItem('ne-depart','1')}
+    await majCatalogue();
+    await majPhotos();
   }catch(e){}
 }
 async function unseed(){var ids=data.produits.filter(function(p){return p.exemple}).map(function(p){return p.id});for(var i=0;i<ids.length;i++)await S.del('produits',ids[i]);toast('Exemples supprimés')}
@@ -2412,7 +2432,7 @@ document.addEventListener('click',async function(e){
       var code=val('m-code').trim();
       if(code&&data.produits.some(function(x){return x.id!==id&&x.code===code}))return toast('Ce code-barres est déjà utilisé par un autre produit','bad');
       var old=id?pById(id):null,stock=num(val('m-stock'));
-      var o=Object.assign({},old||{},{id:id||uid(),nom:nom,cat:val('m-cat').trim()||'Autres',unite:val('m-unite'),prix:prix,prix_gros:num(val('m-gros')),cout:num(val('m-cout')),stock:stock,seuil:num(val('m-seuil')),code:code,paliers:parsePal(val('m-pal')),desc:val('m-desc').trim(),web:chk('m-web'),prix_web:num(val('m-webp')),archive:chk('m-arch'),photo:pendingPhoto===undefined?(old?old.photo||'':''):pendingPhoto});
+      var o=Object.assign({},old||{},{id:id||uid(),nom:nom,cat:val('m-cat').trim()||'Autres',unite:val('m-unite'),prix:prix,prix_gros:num(val('m-gros')),cout:num(val('m-cout')),stock:stock,seuil:num(val('m-seuil')),code:code,paliers:parsePal(val('m-pal')),desc:val('m-desc').trim(),web:chk('m-web'),archive:chk('m-arch'),photo:pendingPhoto===undefined?(old?old.photo||'':''):pendingPhoto});
       await S.put('produits',o);
       if(!old&&stock>0)await addMv({type:'entrée',pid:o.id,nom:o.nom,unite:o.unite,qte:stock,cout:o.cout||0,total:Math.round(stock*(o.cout||0)),fournisseur:'',motif:'Stock de départ'});
       if(old&&r3(stock-old.stock)!==0)await addMv({type:'ajustement',pid:o.id,nom:o.nom,unite:o.unite,qte:r3(stock-old.stock),cout:o.cout,motif:'Correction manuelle'});
