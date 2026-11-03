@@ -182,6 +182,25 @@ header.big .btn{margin:0 auto!important}
 .lnk{background:none;border:0;padding:0;margin-left:4px;font:inherit;font-weight:800;color:var(--accent);text-decoration:underline;cursor:pointer}
 .minpro{width:100%;text-align:center;font-size:12px;font-weight:800;color:#FFF6D6;padding-top:4px}
 .bar .in{flex-wrap:wrap;row-gap:2px}.minpro{order:3}
+
+.bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;margin-top:12px}
+.bcard{background:var(--surface);border:2px solid var(--fg);border-radius:18px;overflow:hidden;text-align:left;font:inherit;color:var(--fg);cursor:pointer;padding:0;display:flex;flex-direction:column;box-shadow:0 5px 0 rgba(0,0,0,.12);transition:transform .15s,box-shadow .15s}
+.bcard:hover{transform:translateY(-3px);box-shadow:0 9px 0 var(--gold)}
+.bcard img,.bcard .bph{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:var(--surface2)}
+.bcard .bph{display:flex;align-items:center;justify-content:center;font-size:48px}
+.bcard .bt{padding:10px 12px 14px;display:flex;flex-direction:column;gap:4px}
+.bcard .bt i{font-style:normal;font-size:12px;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.6px}
+.bcard .bt b{font-size:17px;line-height:1.25}.bcard .bt small{color:var(--muted)}.bcard .bt em{font-style:normal;font-size:14px;color:var(--muted)}
+.post{max-width:760px}.ptag{display:inline-block;background:var(--green);color:#fff;font-weight:800;font-size:12px;border-radius:999px;padding:3px 10px;text-transform:uppercase;letter-spacing:.6px}
+.ptitle{font-size:28px;line-height:1.2;margin:8px 0 2px}
+.phero{width:100%;border:2px solid var(--fg);border-radius:18px;margin:12px 0;display:block}
+.ptext{font-size:17px;line-height:1.65}.ptext h3{margin:20px 0 4px}.ptext ul{padding-left:22px}
+.pvid{position:relative;width:100%;aspect-ratio:16/9;margin:16px 0;border:2px solid var(--fg);border-radius:18px;overflow:hidden;background:#000}
+.pvid.v{aspect-ratio:9/16;max-width:340px;margin-left:auto;margin-right:auto;max-height:640px}
+.pvid iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.pgal{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin:14px 0}
+.pgal img{width:100%;border:2px solid var(--fg);border-radius:14px;display:block}
+.pact{display:flex;gap:10px;flex-wrap:wrap;margin:22px 0}
 </style>
 </head>
 <body>
@@ -265,10 +284,77 @@ function ribbon(){
 }
 function header(big){
   var b=(cat&&cat.boutique)||{};
-  return '<header class="'+(big?'big':'')+'"><div class="in"><div class="brand" data-go="home" role="link" tabindex="0" aria-label="Accueil">'+(b.logo?'<img src="'+esc(b.logo)+'" alt="">':'')+'<div><h1>'+esc(bn(b))+'</h1><p>'+esc([b.adresse,b.tel].filter(Boolean).join(' · '))+'</p></div></div><button class="btn ghost sm" data-go="track" style="margin-left:auto;white-space:nowrap">Suivre ma commande</button></div></header>'+(big?ribbon():'<div class="pzband" style="margin-bottom:14px"></div>');
+  return '<header class="'+(big?'big':'')+'"><div class="in"><div class="brand" data-go="home" role="link" tabindex="0" aria-label="Accueil">'+(b.logo?'<img src="'+esc(b.logo)+'" alt="">':'')+'<div><h1>'+esc(bn(b))+'</h1><p>'+esc([b.adresse,b.tel].filter(Boolean).join(' · '))+'</p></div></div><button class="btn ghost sm" data-go="blog" style="margin-left:auto;white-space:nowrap">Blog</button><button class="btn ghost sm" data-go="track" style="margin-left:8px;white-space:nowrap">Suivre ma commande</button></div></header>'+(big?ribbon():'<div class="pzband" style="margin-bottom:14px"></div>');
 }
 function wafab(cls){var n=((cat&&cat.boutique&&cat.boutique.wa)||'').replace(/\D/g,'');return n?'<a class="wafab '+(cls||'')+' noprint" href="https://wa.me/'+n+'" target="_blank" rel="noopener">💬 WhatsApp</a>':''}
 var GAL=["Notre boutique à Bamako", "Un large choix d’épices", "Vos plats avec nos épices", "Des saveurs du terroir", "Huiles infusées aux épices", "Rayons d’épices et de condiments", "Des produits frais", "Condiments traditionnels", "Coffrets cadeaux", "Huiles et vinaigrettes", "La boutique, côté vitrine", "Notre enseigne : vente d’épices et divers", "Vitrine et rayon d’épices", "Enseigne et devanture", "Niger Épices, Bamako", "Notre stand : poivre, huiles et épices", "Pâtes et condiments en bocaux", "Notre stand au salon", "Panier cadeau d’épices", "Huiles et vinaigres, carte d’Afrique"];
+
+/* ---------- blog ---------- */
+var blogIdx=null,blogErr=false,postCache={},postId='',blogCat='Tout',BCATS=['Tout','Recettes','Astuces','Nouveautés'];
+function route(){var h=location.hash,m=h.match(/^#blog\/(.+)$/);if(m){view='post';postId=decodeURIComponent(m[1])}else if(h==='#blog')view='blog';else if(h==='#boutique')view='shop';else view='home'}
+function bdate(d){try{return new Date(d+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}catch(e){return d||''}}
+async function loadBlog(){
+  if(!LIVE){blogIdx=[];return}
+  try{var rows=await rest('GET','catalogue?id=eq.blog&select=body');blogIdx=((rows[0]&&rows[0].body&&rows[0].body.posts)||[]).filter(function(p){return p.pub!==false});blogErr=false}catch(e){blogErr=true;if(blogIdx===null)blogIdx=[]}
+  if(cat&&(view==='blog'||view==='post'||(view==='home'&&blogIdx.length)))draw();
+}
+async function loadPost(id){
+  if(postCache[id]||!LIVE){if(postCache[id])setPostTitle(id);return}
+  try{var rows=await rest('GET','catalogue?id=eq.bl-'+encodeURIComponent(id)+'&select=body');postCache[id]=(rows[0]&&rows[0].body)||{missing:true}}catch(e){postCache[id]={missing:true,err:true}}
+  if(view==='post'&&postId===id){setPostTitle(id);draw()}
+}
+function setPostTitle(id){var p=postCache[id];if(p&&p.titre)document.title=p.titre+' · '+bn((cat&&cat.boutique)||{})}
+function bcard(p){
+  return '<button class="bcard" data-post="'+esc(p.id)+'">'+(p.thumb?'<img src="'+esc(p.thumb)+'" alt="" loading="lazy">':'<span class="bph">'+(p.cat==='Recettes'?'🍲':p.cat==='Astuces'?'💡':'🌶️')+'</span>')+'<span class="bt">'+(p.cat?'<i>'+esc(p.cat)+'</i>':'')+'<b>'+esc(p.titre)+'</b><small>'+esc(bdate(p.date))+(p.video?' · ▶ vidéo':'')+'</small>'+(p.resume?'<em>'+esc(p.resume)+'</em>':'')+'</span></button>';
+}
+function blogHome(){
+  if(!blogIdx||!blogIdx.length)return '';
+  return '<section class="sec"><h2>Recettes, astuces et nouveautés</h2><p class="muted sub">Le blog Niger Épices.</p><div class="bgrid">'+blogIdx.slice(0,3).map(bcard).join('')+'</div><p style="margin-top:12px"><button class="btn ghost sm" data-go="blog">Voir tous les articles</button></p></section>';
+}
+function blogView(){
+  var list=(blogIdx||[]).filter(function(p){return blogCat==='Tout'||p.cat===blogCat});
+  var h=header()+'<div class="wrap"><p style="margin:6px 0"><button class="btn ghost sm" data-go="home">← Accueil</button></p><h2>Le blog</h2><p class="muted sub">Recettes, astuces et nouveautés Niger Épices.</p>';
+  h+='<div class="chips" style="margin:10px 0">'+BCATS.map(function(c){return '<button class="chip '+(c===blogCat?'on':'')+'" data-bcat="'+esc(c)+'">'+esc(c)+'</button>'}).join('')+'</div>';
+  if(blogIdx===null)h+='<p class="muted">Chargement…</p>';
+  else if(!list.length)h+='<p class="muted">'+(blogErr?'Impossible de charger les articles. Vérifiez votre connexion.':'Les premiers articles arrivent bientôt.')+'</p>';
+  else h+='<div class="bgrid">'+list.map(bcard).join('')+'</div>';
+  return h+'</div>';
+}
+function embedOf(u){
+  u=String(u||'').trim();if(!/^https?:\/\//i.test(u))return null;var m;
+  if(m=u.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{11})/))return{src:'https://www.youtube.com/embed/'+m[1],v:/shorts\//.test(u)};
+  if(m=u.match(/tiktok\.com\/.*\/video\/(\d+)/))return{src:'https://www.tiktok.com/embed/v2/'+m[1],v:true};
+  if(m=u.match(/instagram\.com\/(reel|p|tv)\/([\w-]+)/))return{src:'https://www.instagram.com/'+m[1]+'/'+m[2]+'/embed',v:true};
+  if(/facebook\.com|fb\.watch/.test(u))return{src:'https://www.facebook.com/plugins/video.php?href='+encodeURIComponent(u)+'&show_text=false',v:/\/reel/.test(u)};
+  return null;
+}
+function fmtText(t){
+  var out=[],para=[],list=[];
+  var flushP=function(){if(para.length){out.push('<p>'+para.join('<br>')+'</p>');para=[]}},flushL=function(){if(list.length){out.push('<ul>'+list.join('')+'</ul>');list=[]}};
+  String(t||'').split(/\r?\n/).forEach(function(l){
+    var s=l.trim();
+    if(!s){flushP();flushL();return}
+    if(/^##\s+/.test(s)){flushP();flushL();out.push('<h3>'+esc(s.replace(/^##\s+/,''))+'</h3>');return}
+    if(/^[-•*]\s+/.test(s)){flushP();list.push('<li>'+esc(s.replace(/^[-•*]\s+/,''))+'</li>');return}
+    flushL();para.push(esc(s));
+  });
+  flushP();flushL();return out.join('');
+}
+function postView(){
+  var p=postCache[postId],h=header()+'<div class="wrap post"><p style="margin:6px 0"><button class="btn ghost sm" data-go="blog">← Tous les articles</button></p>';
+  if(!p)return h+'<p class="muted">Chargement…</p></div>';
+  if(p.missing)return h+'<h2>Article introuvable</h2><p class="muted">'+(p.err?'Impossible de charger l’article. Vérifiez votre connexion.':'Cet article n’existe plus.')+'</p></div>';
+  var ph=(p.photos||[]),em=embedOf(p.video);
+  h+=(p.cat?'<div class="ptag">'+esc(p.cat)+'</div>':'')+'<h2 class="ptitle">'+esc(p.titre)+'</h2><p class="muted">'+esc(bdate(p.date))+'</p>';
+  if(ph[0])h+='<img class="phero" src="'+esc(ph[0])+'" alt="'+esc(p.titre)+'">';
+  h+='<div class="ptext">'+fmtText(p.texte)+'</div>';
+  if(em)h+='<div class="pvid '+(em.v?'v':'')+'"><iframe src="'+esc(em.src)+'" loading="lazy" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture; fullscreen" referrerpolicy="strict-origin-when-cross-origin"></iframe></div>';
+  else if(/^https?:\/\//i.test(p.video||''))h+='<p><a class="btn ghost" href="'+esc(p.video)+'" target="_blank" rel="noopener">▶ Voir la vidéo</a></p>';
+  if(ph.length>1)h+='<div class="pgal">'+ph.slice(1).map(function(x){return '<img src="'+esc(x)+'" alt="" loading="lazy">'}).join('')+'</div>';
+  var url=location.origin+location.pathname+'#blog/'+encodeURIComponent(postId);
+  h+='<div class="pact"><button class="btn" data-go="shop">Voir nos produits</button><a class="btn ghost" href="https://wa.me/?text='+encodeURIComponent(p.titre+' — '+url)+'" target="_blank" rel="noopener">Partager sur WhatsApp</a></div></div>';
+  return h;
+}
 function home(){
   var b=cat.boutique||{},ps=cat.produits,wa=(b.wa||'').replace(/\D/g,'');
   var withPh=ps.filter(function(p){return p.photo});
@@ -279,7 +365,7 @@ function home(){
   var inc=ps.filter(function(p){return p.photo&&p.stock>0}).slice(0,4);if(inc.length)h+='<section class="sec"><h2>Nos incontournables</h2><p class="muted sub">Les favoris de nos clients.</p><div class="incg">'+inc.map(function(p){return '<div class="inc"><button class="incp" data-open="'+esc(p.id)+'"><img src="'+esc(p.photo)+'" alt="'+esc(p.nom)+'" loading="lazy"></button><strong>'+esc(p.nom)+'</strong><button class="btn sm" data-open="'+esc(p.id)+'">Découvrir</button></div>'}).join('')+'</div></section>';
   if(cats.length)h+='<section class="sec"><h2>Nos rayons</h2><div class="cgrid">'+cats.map(function(c){return '<button class="ct" data-hcat="'+esc(c.n)+'"><span class="cti">'+(c.ph?'<img src="'+esc(c.ph)+'" alt="" loading="lazy">':catIcon(c.n))+'</span><strong>'+esc(c.n)+'</strong><span class="muted">'+c.k+' produit'+(c.k>1?'s':'')+'</span></button>'}).join('')+'</div></section>';
   h+='<section class="sec"><h2>Commander chez nous</h2><div class="wgrid"><div class="wc"><span class="ic">🛒</span><b>Simple et rapide</b><span class="muted">Choisissez vos produits, vérifiez votre facture, puis validez. Pas de compte à créer.</span></div><div class="wc"><span class="ic">🚚</span><b>Retrait ou livraison</b><span class="muted">'+esc(b.liv||'Retirez votre commande en boutique ou faites-vous livrer.')+'</span></div><div class="wc"><span class="ic">💰</span><b>Paiement à la réception</b><span class="muted">Le paiement se fait à la réception, selon l’accord avec la boutique.</span></div><div class="wc"><span class="ic">📦</span><b>Suivi de commande</b><span class="muted">Suivez votre commande étape par étape avec son numéro.</span></div></div></section>';
-  h+='<section class="sec story"><h2>Notre histoire</h2><div class="sbox"><p class="lead">Niger Épices, c’est bien plus qu’une marque d’épices : une histoire de passion, de traditions et de savoir-faire ancestral nigérien et malien.</p><p>Née de la vision d’une femme entrepreneure nigéro-malienne, Niger Épices valorise les richesses culinaires de notre terroir et fait découvrir toute l’authenticité des saveurs africaines. Inspirée des recettes de nos mères et de nos grands-mères, elle met à l’honneur les épices locales, les condiments traditionnels et les ingrédients qui font la richesse de notre gastronomie.</p><div class="s3"><div><b>🌿 Le goût de nos traditions</b><p>Au Niger comme au Mali, la cuisine est un moment de partage, de convivialité et de transmission. Nous célébrons cet héritage avec une large sélection d’épices et de condiments, pour les recettes traditionnelles comme pour les créations modernes.</p></div><div><b>👩🏾‍💼 Une femme, une passion</b><p>Derrière Niger Épices, une femme nigéro-malienne entreprenante qui veut promouvoir les produits de notre terroir, rendre les épices traditionnelles accessibles au plus grand nombre et faire rayonner le savoir-faire culinaire nigérien et malien.</p></div><div><b>🌶️ Une diversité de saveurs</b><p>Épices parfumées, mélanges traditionnels, condiments locaux et spécialités africaines : pour vos plats du quotidien comme pour vos grandes occasions.</p></div></div><p class="sign">Des racines nigériennes et maliennes, des saveurs africaines, une ambition sans frontières.</p></div></section>';
+  h+=blogHome();h+='<section class="sec story"><h2>Notre histoire</h2><div class="sbox"><p class="lead">Niger Épices, c’est bien plus qu’une marque d’épices : une histoire de passion, de traditions et de savoir-faire ancestral nigérien et malien.</p><p>Née de la vision d’une femme entrepreneure nigéro-malienne, Niger Épices valorise les richesses culinaires de notre terroir et fait découvrir toute l’authenticité des saveurs africaines. Inspirée des recettes de nos mères et de nos grands-mères, elle met à l’honneur les épices locales, les condiments traditionnels et les ingrédients qui font la richesse de notre gastronomie.</p><div class="s3"><div><b>🌿 Le goût de nos traditions</b><p>Au Niger comme au Mali, la cuisine est un moment de partage, de convivialité et de transmission. Nous célébrons cet héritage avec une large sélection d’épices et de condiments, pour les recettes traditionnelles comme pour les créations modernes.</p></div><div><b>👩🏾‍💼 Une femme, une passion</b><p>Derrière Niger Épices, une femme nigéro-malienne entreprenante qui veut promouvoir les produits de notre terroir, rendre les épices traditionnelles accessibles au plus grand nombre et faire rayonner le savoir-faire culinaire nigérien et malien.</p></div><div><b>🌶️ Une diversité de saveurs</b><p>Épices parfumées, mélanges traditionnels, condiments locaux et spécialités africaines : pour vos plats du quotidien comme pour vos grandes occasions.</p></div></div><p class="sign">Des racines nigériennes et maliennes, des saveurs africaines, une ambition sans frontières.</p></div></section>';
   h+='<section class="sec"><h2>La boutique en images</h2><div class="collage">'+GAL.map(function(g,i){return '<img class="cl cl'+(i%5)+'" src="photos/p'+('0'+(i+1)).slice(-2)+'.jpg" alt="'+esc(g)+'" loading="lazy" decoding="async">'}).join('')+'</div></section>';
   h+='<section class="sec"><h2>Pourquoi nous choisir</h2><div class="wgrid"><div class="wc"><span class="ic">🌿</span><b>Produits authentiques</b><span class="muted">Épices, herbes et spécialités du Niger, sélectionnées avec soin.</span></div><div class="wc"><span class="ic">🏪</span><b>Une vraie boutique</b><span class="muted">Une boutique physique à Bamako : vous pouvez venir voir et goûter.</span></div><div class="wc"><span class="ic">🤝</span><b>Détail et gros</b><span class="muted">Particuliers, restaurants et revendeurs : demandez nos prix de gros.</span></div></div></section>';
   h+='<section class="sec"><h2>Questions fréquentes</h2><div class="faq"><details><summary>Comment commander ?</summary><p>Ouvrez la boutique, choisissez vos produits, vérifiez votre facture puis validez. Aucun compte n’est nécessaire.</p></details><details><summary>Comment suis-je livré ?</summary><p>'+esc(b.liv||'Vous pouvez retirer votre commande en boutique ou vous faire livrer. La boutique vous confirme les détails par téléphone ou WhatsApp.')+'</p></details><details><summary>Comment payer ?</summary><p>Le paiement se fait à la réception de la commande, selon l’accord avec la boutique.</p></details><details><summary>Vendez-vous en gros ?</summary><p>Oui. Contactez-nous par WhatsApp ou par téléphone pour connaître les prix de gros.</p></details><details><summary>Comment suivre ma commande ?</summary><p>Utilisez « Suivre ma commande » avec le numéro reçu après validation.</p></details></div></section>';
@@ -331,7 +417,7 @@ function done(){
 function draw(){
   if(!cat){$('#app').innerHTML='<div class="wrap" style="padding-top:40px"><h2>Boutique indisponible</h2><p class="muted">Impossible de charger les produits. Vérifiez votre connexion et réessayez.</p><button class="btn" onclick="location.reload()">Réessayer</button></div>';return}
   var fo=document.activeElement&&document.activeElement.id,ps=document.activeElement&&document.activeElement.selectionStart;
-  $('#app').innerHTML='<div class="page">'+(view==='home'?home():view==='shop'?shop():view==='invoice'?invoice():view==='track'?track():done())+(view==='home'?'':'<div class="foot noprint"></div>')+'<div style="height:70px"></div>'+(view==='home'?wafab(''):view==='shop'?wafab('shop'):'')+'</div>';
+  $('#app').innerHTML='<div class="page">'+(view==='home'?home():view==='shop'?shop():view==='invoice'?invoice():view==='track'?track():view==='blog'?blogView():view==='post'?postView():done())+(view==='home'?'':'<div class="foot noprint"></div>')+'<div style="height:70px"></div>'+(view==='home'||view==='blog'||view==='post'?wafab(''):view==='shop'?wafab('shop'):'')+'</div>';
   if(view==='invoice')updTotals();
   if(fo&&$('#'+fo)){$('#'+fo).focus();try{$('#'+fo).setSelectionRange(ps,ps)}catch(e){}}
 }
@@ -364,10 +450,12 @@ async function send(){
   }
 }
 document.addEventListener('click',function(e){
-  var t=e.target.closest('[data-cat],[data-m],[data-p],[data-rm],[data-go],[data-zoom],[data-open],[data-hcat],[data-acces],[data-tref],#t-go,#t-sim,#send,#print');if(!t)return;
+  var t=e.target.closest('[data-cat],[data-m],[data-p],[data-rm],[data-go],[data-zoom],[data-open],[data-hcat],[data-post],[data-bcat],[data-acces],[data-tref],#t-go,#t-sim,#send,#print');if(!t)return;
   if(t.dataset.tref){trackRef=t.dataset.tref;draw();trackLoad(trackRef);return}
   if(t.id==='t-go'){trackLoad(($('#t-ref')||{}).value);return}
   if(t.id==='t-sim'){var m=JSON.parse(localStorage.getItem('bq-demo-st')||'{}');m[trackRef]=Math.min(3,(m[trackRef]||0)+1);localStorage.setItem('bq-demo-st',JSON.stringify(m));trackLoad(trackRef);return}
+  if(t.dataset.post){saveCust();postId=t.dataset.post;view='post';try{history.pushState(null,'','#blog/'+encodeURIComponent(postId))}catch(x){}draw();window.scrollTo(0,0);loadPost(postId);return}
+  if(t.dataset.bcat!==undefined){blogCat=t.dataset.bcat;draw();return}
   if(t.dataset.acces){setAcces(t.dataset.acces);enterShop();return}
   if(t.dataset.open){var oid=t.dataset.open;enterShop();openLB(oid);return}
   if(t.dataset.hcat!==undefined){cc=t.dataset.hcat;enterShop();return}
@@ -376,7 +464,7 @@ document.addEventListener('click',function(e){
   if(t.dataset.m){var p=prod(t.dataset.m);setQty(t.dataset.m,(cart[t.dataset.m]||0)-step(p));saveCust();draw();return}
   if(t.dataset.p){var p2=prod(t.dataset.p);setQty(t.dataset.p,(cart[t.dataset.p]||0)+step(p2));saveCust();draw();return}
   if(t.dataset.rm){delete cart[t.dataset.rm];save();saveCust();draw();return}
-  if(t.dataset.go){saveCust();var nv=t.dataset.go;if(nv==='home'){try{history.pushState(null,'',location.pathname)}catch(x){}}else if(nv==='shop'&&view==='home'){try{history.pushState(null,'','#boutique')}catch(x){}}view=nv;draw();window.scrollTo(0,0);if(view==='track'&&trackRef)trackLoad(trackRef);return}
+  if(t.dataset.go){saveCust();var nv=t.dataset.go;if(nv==='home'){try{history.pushState(null,'',location.pathname)}catch(x){}}else if(nv==='shop'&&view==='home'){try{history.pushState(null,'','#boutique')}catch(x){}}else if(nv==='blog'){try{history.pushState(null,'','#blog')}catch(x){}}view=nv;draw();window.scrollTo(0,0);if(view==='blog'&&(blogIdx===null||blogErr))loadBlog();if(view==='track'&&trackRef)trackLoad(trackRef);return}
   if(t.id==='send')send();
   if(t.id==='print')window.print();
 });
@@ -460,12 +548,12 @@ async function loadHD(id){
 }
 function closeLB(){var e=document.getElementById('lb');if(e)e.classList.remove('on');lb.id=null;document.body.style.overflow=''}
 document.addEventListener('keydown',function(e){if((e.key==='Enter'||e.key===' ')&&e.target&&e.target.dataset&&e.target.dataset.zoom){e.preventDefault();openLB(e.target.dataset.zoom)}});
-var sm=location.search.match(/[?&]suivi=([^&]+)/);if(sm){view='track';trackRef=decodeURIComponent(sm[1]).toUpperCase()}else if(location.hash==='#boutique')view='shop';
-window.addEventListener('popstate',function(){if(view==='home'||view==='shop'){view=location.hash==='#boutique'?'shop':'home';if(cat){closeLB();draw();window.scrollTo(0,0)}}});
+var sm=location.search.match(/[?&]suivi=([^&]+)/);if(sm){view='track';trackRef=decodeURIComponent(sm[1]).toUpperCase()}else if(location.hash==='#boutique')view='shop';else if(/^#blog/.test(location.hash))route();
+window.addEventListener('popstate',function(){if(['home','shop','blog','post'].indexOf(view)>=0){route();if(cat){closeLB();draw();window.scrollTo(0,0);if(view==='post')loadPost(postId)}}});
 document.addEventListener('keydown',function(e){var t=e.target;if(e.key==='Enter'&&t&&t.getAttribute&&t.getAttribute('role')==='link'&&t.dataset&&t.dataset.go)t.click()});
 var DEMO=!LIVE&&!!(window.BOUTIQUE_DEMO||/[?&]demo=1/.test(location.search)||/^(localhost|127\.)/.test(location.hostname)||location.protocol==='file:');
 if(!LIVE&&!DEMO){document.title='Niger Épices · Bientôt en ligne';document.getElementById('app').innerHTML='<div class="page"><div class="wrap" style="text-align:center;padding:60px 16px"><h1 style="font-size:34px;margin:0 0 10px">Niger Épices</h1><p style="font-size:18px">Notre boutique en ligne ouvre bientôt.</p><p class="muted">Épices, viandes séchées et saveurs du Sahel, à Bamako.</p></div></div>';return}
-loadCart();loadCat().then(function(){if(cat){document.title=bn(cat.boutique||{})+' · Commander en ligne';Object.keys(cart).forEach(function(id){if(!prod(id))delete cart[id]})}draw();if(view==='track'&&trackRef)trackLoad(trackRef)});
+loadCart();loadCat().then(function(){loadBlog();if(view==='post')loadPost(postId);if(cat){document.title=bn(cat.boutique||{})+' · Commander en ligne';Object.keys(cart).forEach(function(id){if(!prod(id))delete cart[id]})}draw();if(view==='track'&&trackRef)trackLoad(trackRef)});
 })();
 </script>
 </body>
