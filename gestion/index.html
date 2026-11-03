@@ -1741,7 +1741,6 @@ function render(){
   try{ss=ae.selectionStart;se=ae.selectionEnd}catch(e){}
   var y=window.scrollY;
   var tabs=isAdmin()?TABS_ADMIN:TABS_CAISSE;
-  if(SYNC.tag)tabs=tabs.filter(function(t){return t[0]!=='caisse'});
   if(!tabs.some(function(t){return t[0]===ui.tab}))ui.tab=tabs[0][0];
   $('#brand-name').textContent=reglages.nom||'Niger Épices';
   $('#brand-mark').innerHTML=reglages.logo?'<img class="logo" src="'+reglages.logo+'" alt="">':'<div class="mark" aria-hidden="true">'+initial(reglages.nom)+'</div>';
