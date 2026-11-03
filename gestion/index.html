@@ -409,10 +409,11 @@ var ICONS={
  commandes:'<path d="M5 8h14l-1 12H6z"/><path d="M9 8a3 3 0 0 1 6 0"/>',
  clients:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6.5 6.5 0 0 1 3.5 6"/>',
  depenses:'<path d="M3 7a2 2 0 0 1 2-2h13v4"/><rect x="3" y="7" width="18" height="13" rx="2"/><circle cx="16.5" cy="13.5" r="1.2"/>',
+ blog:'<path d="M5 3h14v18H5z"/><path d="M8 8h8M8 12h8M8 16h5"/>',
  rapports:'<path d="M4 20V4M4 20h16"/><path d="M8 16v-5M12 16V8M16 16v-8"/>',
  equipe:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>'
 };
-var TABS_ADMIN=[['cockpit','Cockpit'],['journal','Ventes'],['caisse','Caisse'],['produits','Produits'],['stock','Stock'],['production','Production'],['fournisseurs','Fournisseurs'],['commandes','Commandes'],['clients','Clients'],['depenses','Dépenses'],['rapports','Rapports'],['equipe','Réglages']];
+var TABS_ADMIN=[['cockpit','Cockpit'],['journal','Ventes'],['caisse','Caisse'],['produits','Produits'],['stock','Stock'],['production','Production'],['fournisseurs','Fournisseurs'],['commandes','Commandes'],['blog','Blog'],['clients','Clients'],['depenses','Dépenses'],['rapports','Rapports'],['equipe','Réglages']];
 var TABS_CAISSE=[['caisse','Caisse'],['ventes','Mes ventes']];
 
 /* ---------- data store (kept on this computer, works offline) ---------- */
@@ -1584,6 +1585,55 @@ function blOrder(o,kind){
   if(kind!=='bl'&&o.frais>0)L.push({pid:'',nom:'Frais de livraison'+(o.zone?' · '+o.zone:''),qte:1,unite:'',prix:o.frais});
   var tot=sumBy(L,function(l){return l.qte*l.prix});
   return {numero:pre+String(o.id).slice(-5).toUpperCase(),ts:kind==='bl'?o.ts:Date.now(),clientId:o.clientId,clientNom:o.clientNom,tel:o.tel,type:o.type,lignes:L,total:tot,paye:o.acompte||0,remise:0,mode:o.acompte>0?'Acompte':'',vendeur:''}}
+
+/* ---------- blog (articles publiés sur le site de vente) ---------- */
+var BLOG_CATS=['Recettes','Astuces','Nouveautés'];
+var bd=null;
+function blogSlug(t){return slug(t).toLowerCase().slice(0,40)}
+function blogUrl(id){return location.origin+'/#blog/'+encodeURIComponent(id)}
+async function blogLoad(){
+  if(ui.blogLoading)return;ui.blogLoading=true;
+  try{var rows=await opsRest('GET','catalogue?id=eq.blog&select=body');ui.blogIdx=(rows[0]&&rows[0].body&&rows[0].body.posts)||[];ui.blogErr=''}
+  catch(e){ui.blogErr=String(e.message||e);ui.blogIdx=ui.blogIdx||[]}
+  ui.blogLoading=false;if(ui.tab==='blog')render();
+}
+function vBlog(){
+  var h='<div class="vh"><h2>Blog</h2><div class="vh-r"><button class="btn" data-act="blog-new">Nouvel article</button></div></div>';
+  if(!opsOn())return h+'<section class="card"><p class="muted" style="margin:0">Le blog est publié sur le site de vente : il faut d’abord relier cet appareil en ligne (Réglages, Synchronisation).</p></section>';
+  if(ui.blogIdx==null){blogLoad();return h+'<section class="card"><p class="muted" style="margin:0">Chargement des articles…</p></section>'}
+  h+='<section class="card"><p class="muted" style="margin:0;font-size:13px">Écrivez des recettes, astuces et nouveautés avec des photos, et collez un lien de vidéo TikTok, YouTube, Facebook ou Instagram. Les articles apparaissent aussitôt sur le site de vente (page Blog).</p></section>';
+  if(ui.blogErr)h+='<div class="note bad">Chargement impossible : '+esc(ui.blogErr)+' <button class="btn ghost sm" data-act="blog-reload">Réessayer</button></div>';
+  if(!ui.blogIdx.length)return h+'<div class="empty"><p class="muted">Aucun article pour le moment. Touchez « Nouvel article » pour commencer.</p></div>';
+  return h+ui.blogIdx.map(function(p){
+    return '<section class="card"><div class="row">'+(p.thumb?'<img class="thumb" style="width:72px;height:72px;object-fit:cover" src="'+p.thumb+'" alt="">':'<div class="thumb ph" style="width:72px;height:72px;font-size:26px">✎</div>')+'<div class="grow"><strong>'+esc(p.titre)+'</strong><div class="muted">'+esc(p.cat||'')+' · '+fdstr(p.date)+(p.video?' · vidéo':'')+'</div>'+(p.pub===false?'<span class="badge low">Brouillon (non publié)</span>':'<span class="badge ok">Publié</span>')+'</div></div><div class="actions"><button class="btn ghost sm" data-act="blog-edit" data-id="'+esc(p.id)+'">Modifier</button>'+(p.pub===false?'':'<a class="btn ghost sm" href="'+blogUrl(p.id)+'" target="_blank" rel="noopener">Voir sur le site</a><a class="btn ghost sm" href="https://wa.me/?text='+encodeURIComponent(p.titre+' — '+blogUrl(p.id))+'" target="_blank" rel="noopener">Partager</a>')+'<button class="btn ghost sm bad" data-act="blog-del" data-id="'+esc(p.id)+'" data-confirm>Supprimer</button></div></section>';
+  }).join('');
+}
+function bdRead(){
+  if(!bd||!document.getElementById('m-btitre'))return;
+  bd.titre=val('m-btitre');bd.cat=val('m-bcat');bd.date=val('m-bdate')||today();bd.texte=($('#m-btexte')||{}).value||'';bd.video=val('m-bvideo');bd.pub=!!($('#m-bpub')||{}).checked;
+}
+function blogModal(){
+  var d=bd;
+  modal('<h2>'+(d.isNew?'Nouvel article':'Modifier l’article')+'</h2><div class="form g2"><label class="full">Titre<input id="m-btitre" class="in" maxlength="120" value="'+esc(d.titre)+'" placeholder="Ex. Sauce piment maison au gingembre"></label><label>Rubrique<select id="m-bcat" class="in">'+BLOG_CATS.map(function(c){return '<option'+(c===d.cat?' selected':'')+'>'+c+'</option>'}).join('')+'</select></label><label>Date<input id="m-bdate" class="in" type="date" value="'+esc(d.date)+'"></label><label class="full">Texte de l’article<textarea id="m-btexte" class="in" rows="9" placeholder="Écrivez ici. Une ligne vide pour changer de paragraphe.">'+esc(d.texte)+'</textarea></label></div><p class="muted" style="font-size:12.5px;margin:4px 0">Astuce : commencez une ligne par « - » pour faire une liste (ingrédients), ou par « ## » pour un sous-titre (Préparation).</p><div class="form"><label>Photos (la première est la photo principale, 6 maximum)<input id="m-bphotos" class="in" type="file" accept="image/*" multiple></label></div><div class="actions" style="flex-wrap:wrap">'+d.photos.map(function(x,i){return '<div style="position:relative"><img class="thumb" style="width:84px;height:84px;object-fit:cover" src="'+x+'" alt="">'+'<button class="btn ghost sm" data-act="blog-phdel" data-id="'+i+'" style="position:absolute;top:-6px;right:-6px;padding:0 7px">✕</button></div>'}).join('')+'</div><div class="form"><label>Lien vidéo (TikTok, YouTube, Facebook ou Instagram) — facultatif<input id="m-bvideo" class="in" type="url" inputmode="url" value="'+esc(d.video)+'" placeholder="https://www.tiktok.com/@nigerepices/video/…"></label></div><label class="chk"><input id="m-bpub" type="checkbox" '+(d.pub?'checked':'')+'> Publier sur le site (décochez pour garder en brouillon)</label><div class="actions"><button class="btn green" data-act="blog-save">Enregistrer</button><button class="btn ghost" data-act="close">Annuler</button></div>');
+}
+async function blogSave(){
+  bdRead();var d=bd;
+  if(!d.titre.trim())return toast('Donnez un titre à l’article','bad');
+  if(!d.texte.trim()&&!d.photos.length&&!d.video.trim())return toast('Ajoutez du texte, une photo ou une vidéo','bad');
+  if(d.video.trim()&&!/^https?:\/\//i.test(d.video.trim()))return toast('Le lien de la vidéo doit commencer par https://','bad');
+  var id=d.id||(blogSlug(d.titre)||'article')+'-'+Date.now().toString(36).slice(-4);
+  var resume=d.texte.replace(/^##\s+/gm,'').replace(/^[-•*]\s+/gm,'').replace(/\s+/g,' ').trim().slice(0,140);
+  var thumb=d.photos[0]?await thumbOf(d.photos[0],360):'';
+  var post={id:id,titre:d.titre.trim(),cat:d.cat,date:d.date,texte:d.texte,video:d.video.trim(),photos:d.photos,pub:d.pub,ts:Date.now()};
+  try{
+    await opsRest('POST','catalogue?on_conflict=id',[{id:'bl-'+id,ts:Date.now(),body:post}],{Prefer:'resolution=merge-duplicates,return=minimal'});
+    var rows=await opsRest('GET','catalogue?id=eq.blog&select=body'),L=((rows[0]&&rows[0].body&&rows[0].body.posts)||[]).filter(function(x){return x.id!==id});
+    L.push({id:id,titre:post.titre,cat:post.cat,date:post.date,resume:resume,thumb:thumb,video:post.video?1:0,pub:post.pub,ts:post.ts});
+    L.sort(function(a,b){return (b.date||'').localeCompare(a.date||'')||b.ts-a.ts});
+    await opsRest('POST','catalogue?on_conflict=id',[{id:'blog',ts:Date.now(),body:{posts:L.slice(0,60)}}],{Prefer:'resolution=merge-duplicates,return=minimal'});
+    ui.blogIdx=L;bd=null;closeModal();render();logAct('Article de blog',(d.id?'modifié : ':'publié : ')+post.titre);toast(post.pub?'Article publié sur le site':'Brouillon enregistré');
+  }catch(e){toast('Enregistrement impossible : '+String(e.message||e).slice(0,120),'bad')}
+}
 function vCommandes(){
   var h='<div class="vh"><h2>Commandes</h2><div class="vh-r">'+(opsOn()&&reglages.bq_actif?'<button class="btn ghost" data-act="bq-pull">Récupérer les commandes web</button>':'')+'<button class="btn" data-act="new-commande">Nouvelle commande</button></div></div>';
   h+='<div class="chips">'+['Actives'].concat(STATUTS).map(function(s){return '<button class="chip '+(ui.ostat===s?'on':'')+'" data-act="ostat" data-v="'+s+'">'+s+'</button>'}).join('')+'</div>';
@@ -1675,7 +1725,7 @@ function vEquipe(){
   h+=extraReglages();
   return h;
 }
-var VIEWS={production:vProduction,fournisseurs:vFournisseurs,journal:vJournal,cockpit:vCockpit,caisse:vCaisse,ventes:vVentes,produits:vProduits,stock:vStock,commandes:vCommandes,clients:vClients,depenses:vDepenses,rapports:vRapports,equipe:vEquipe};
+var VIEWS={production:vProduction,fournisseurs:vFournisseurs,journal:vJournal,cockpit:vCockpit,caisse:vCaisse,ventes:vVentes,produits:vProduits,stock:vStock,commandes:vCommandes,blog:vBlog,clients:vClients,depenses:vDepenses,rapports:vRapports,equipe:vEquipe};
 
 function render(){
   if(!device){renderChooser();return}
@@ -2520,6 +2570,12 @@ document.addEventListener('click',async function(e){
     case 'restore-auto':{var sa=await idbGet(id);if(sa){applyState(sa);await flushSave();session=null;render();toast('Copie du '+fdstr(id.slice(5))+' restaurée')}break}
     case 'rapport-pdf':rapportPDF();break;
     case 'o-bl':{var ob=data.commandes.find(function(x){return x.id===id});if(ob)deliverPDF(makePDF(blOrder(ob),{bl:true}),'Bon-de-livraison-'+slug(ob.clientNom)+'.pdf','Bon de livraison',ob.tel);break}
+    case 'blog-new':bd={isNew:true,id:'',titre:'',cat:'Recettes',date:today(),texte:'',video:'',photos:[],pub:true};blogModal();break;
+    case 'blog-reload':ui.blogIdx=null;ui.blogErr='';render();break;
+    case 'blog-edit':{try{var rows=await opsRest('GET','catalogue?id=eq.bl-'+encodeURIComponent(id)+'&select=body');var bp=rows[0]&&rows[0].body;if(!bp)return toast('Article introuvable','bad');bd={isNew:false,id:bp.id,titre:bp.titre||'',cat:bp.cat||'Recettes',date:bp.date||today(),texte:bp.texte||'',video:bp.video||'',photos:bp.photos||[],pub:bp.pub!==false};blogModal()}catch(e){toast('Chargement impossible : '+String(e.message||e).slice(0,100),'bad')}break}
+    case 'blog-phdel':bdRead();if(bd){bd.photos.splice(+id,1);blogModal()}break;
+    case 'blog-save':await blogSave();break;
+    case 'blog-del':{try{try{await opsRest('DELETE','catalogue?id=eq.bl-'+encodeURIComponent(id))}catch(e1){await opsRest('POST','catalogue?on_conflict=id',[{id:'bl-'+id,ts:Date.now(),body:{missing:true,titre:'',pub:false}}],{Prefer:'resolution=merge-duplicates,return=minimal'})}var rw=await opsRest('GET','catalogue?id=eq.blog&select=body'),L2=((rw[0]&&rw[0].body&&rw[0].body.posts)||[]).filter(function(x){return x.id!==id});await opsRest('POST','catalogue?on_conflict=id',[{id:'blog',ts:Date.now(),body:{posts:L2}}],{Prefer:'resolution=merge-duplicates,return=minimal'});ui.blogIdx=L2;render();toast('Article supprimé')}catch(e){toast('Suppression impossible : '+String(e.message||e).slice(0,100),'bad')}break}
     case 'o-pf':{var op=data.commandes.find(function(x){return x.id===id});if(op)deliverPDF(makePDF(blOrder(op,'pf'),{pf:true}),'Pro-forma-'+slug(op.clientNom)+'.pdf','Facture pro forma',op.tel,'Bonjour '+op.clientNom+', voici votre facture pro forma : '+money(blOrder(op,'pf').total)+'. '+(reglages.nom||''));break}
     case 'o-fin':{var of_=data.commandes.find(function(x){return x.id===id});if(of_)deliverPDF(makePDF(blOrder(of_,'f')),'Facture-'+slug(of_.clientNom)+'.pdf','Facture',of_.tel,'Bonjour '+of_.clientNom+', voici votre facture : '+money(blOrder(of_,'f').total)+'. '+(reglages.nom||''));break}
     case 'cat':ui.cat=v;render();break;
@@ -2779,6 +2835,7 @@ document.addEventListener('change',async function(e){
   }
   try{
     if(t.id==='m-recu'){pendingRecu=await compressImage(t.files[0],900,0.7);document.getElementById('m-rprev').innerHTML='<img class="thumb" src="'+pendingRecu+'" alt="">'}
+    if(t.id==='m-bphotos'&&bd){bdRead();var fs=Array.prototype.slice.call(t.files);for(var fi=0;fi<fs.length&&bd.photos.length<6;fi++)bd.photos.push(await compressImage(fs[fi],900,0.72));blogModal();return}
     if(t.id==='m-photo'){pendingPhoto=await compressImage(t.files[0],800,0.75);document.getElementById('m-prev').innerHTML='<img class="thumb" style="width:84px;height:84px" src="'+pendingPhoto+'" alt="">'}
     if(t.id==='m-logo'){pendingLogo=await compressImage(t.files[0],220,0.8);document.getElementById('m-lprev').innerHTML='<img class="thumb" style="width:84px;height:84px" src="'+pendingLogo+'" alt="">'}
   }catch(err){toast('Cette image ne peut pas être lue','bad')}
