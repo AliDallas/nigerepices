@@ -259,8 +259,25 @@ function save(){try{localStorage.setItem('bq-cart',JSON.stringify(cart))}catch(e
 function loadCart(){try{cart=JSON.parse(localStorage.getItem('bq-cart')||'{}')||{}}catch(e){cart={}}}
 var acces='';try{acces=localStorage.getItem('bq-acces')==='pro'?'pro':'part'}catch(e){acces='part'}
 var MIN_PRO=50000;
-function px(p){return acces==='pro'&&p.gros>0?p.gros:p.prix}
-function setAcces(a){acces=a==='pro'?'pro':'part';try{localStorage.setItem('bq-acces',acces)}catch(e){}}
+var adm=false,admCode='',pxo={};
+function px(p){if(adm&&pxo[p.id]!=null)return pxo[p.id];return acces==='pro'&&p.gros>0?p.gros:p.prix}
+var _ak={};
+async function admKey(code,salt){var k=salt+'|'+code;if(_ak[k])return _ak[k];var enc=new TextEncoder(),m=await crypto.subtle.importKey('raw',enc.encode(code),'PBKDF2',false,['deriveBits']);var b=await crypto.subtle.deriveBits({name:'PBKDF2',salt:enc.encode(salt),iterations:120000,hash:'SHA-256'},m,256);var h=Array.from(new Uint8Array(b)).map(function(x){return ('0'+x.toString(16)).slice(-2)}).join('');_ak[k]=h;return h}
+async function sha256hex(t){var b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));return Array.from(new Uint8Array(b)).map(function(x){return ('0'+x.toString(16)).slice(-2)}).join('')}
+async function admCheck(code){try{var v=((cat&&cat.boutique)||{}).adm;if(!v)return 'off';return (await admKey(code,'ne-unlock'))===v?'ok':'bad'}catch(e){return 'err'}}
+function admOpen(){
+  var o=document.getElementById('admbox');if(o)o.remove();
+  o=document.createElement('div');o.id='admbox';o.className='noprint';o.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  o.innerHTML='<div style="background:#fff;color:#111;border-radius:16px;padding:18px;max-width:340px;width:100%;display:grid;gap:10px"><h3 style="margin:0">Accès administrateur</h3><input id="adm-in" type="password" autocomplete="off" placeholder="Code administrateur" style="padding:10px;border:2px solid #111;border-radius:10px;font-size:16px"><div id="adm-m" style="color:#C8102E;font-size:14px;min-height:18px"></div><div style="display:flex;gap:8px"><button class="btn" id="adm-ok" type="button">Entrer</button><button class="btn ghost" id="adm-no" type="button">Annuler</button></div></div>';
+  document.body.appendChild(o);var inp=document.getElementById('adm-in');inp.focus();
+  var go=async function(){var m=document.getElementById('adm-m');m.textContent='Vérification…';var r=await admCheck(inp.value);
+    if(r==='ok'){adm=true;admCode=inp.value;pxo={};try{sessionStorage.setItem('bq-admc',admCode)}catch(e){}o.remove();enterShop()}
+    else m.textContent=r==='off'?'L’accès administrateur n’est pas activé dans la gestion.':r==='bad'?'Code incorrect.':'Vérification impossible sur cet appareil.'};
+  document.getElementById('adm-ok').onclick=go;document.getElementById('adm-no').onclick=function(){o.remove()};inp.onkeydown=function(e){if(e.key==='Enter')go()};
+}
+async function admRestore(){try{var c=sessionStorage.getItem('bq-admc');if(c&&(await admCheck(c))==='ok'){adm=true;admCode=c;draw()}}catch(e){}}
+function admOut(){adm=false;admCode='';pxo={};try{sessionStorage.removeItem('bq-admc')}catch(e){}enterShop()}
+function setAcces(a){acces=a==='pro'?'pro':'part';pxo={};try{localStorage.setItem('bq-acces',acces)}catch(e){}}
 function prod(id){return cat.produits.find(function(p){return p.id===id})}
 function lines(){var L=[];Object.keys(cart).forEach(function(id){var p=prod(id);if(p&&cart[id]>0)L.push({p:p,qte:cart[id]})});return L}
 function total(){return lines().reduce(function(s,l){return s+l.qte*px(l.p)},0)}
@@ -374,7 +391,7 @@ function home(){
   h+='<section class="sec"><h2>Questions fréquentes</h2><div class="faq"><details><summary>Comment commander ?</summary><p>Ouvrez la boutique, choisissez vos produits, vérifiez votre facture puis validez. Aucun compte n’est nécessaire.</p></details><details><summary>Comment suis-je livré ?</summary><p>'+esc(b.liv||'Vous pouvez retirer votre commande en boutique ou vous faire livrer. La boutique vous confirme les détails par téléphone ou WhatsApp.')+'</p></details><details><summary>Comment payer ?</summary><p>Le paiement se fait à la réception de la commande, selon l’accord avec la boutique.</p></details><details><summary>Vendez-vous en gros ?</summary><p>Oui. Contactez-nous par WhatsApp ou par téléphone pour connaître les prix de gros.</p></details><details><summary>Comment suivre ma commande ?</summary><p>Utilisez « Suivre ma commande » avec le numéro reçu après validation.</p></details></div></section>';
   h+='<div class="gar"><span>✅ Produits sélectionnés</span><span>🚚 Livraison à Bamako</span><span>📞 Service client réactif</span><span>🔒 Pas de paiement en ligne</span></div>';
   var cl=[];if(b.adresse)cl.push('📍 '+esc(b.adresse));if(b.tel)cl.push('📞 <a href="tel:'+esc(String(b.tel).replace(/[^\d+]/g,''))+'">'+esc(b.tel)+'</a>');if(wa)cl.push('💬 <a href="https://wa.me/'+wa+'" target="_blank" rel="noopener">WhatsApp</a>');if(b.email)cl.push('✉️ <a href="mailto:'+esc(b.email)+'">'+esc(b.email)+'</a>');
-  h+='<section class="sec"><h2>Nous trouver</h2><div class="cbox"><div class="lines">'+(cl.join('<br>')||'<span class="muted">Contactez la boutique pour toute question.</span>')+'</div><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn go" data-go="shop">Voir la boutique</button><button class="btn ghost" data-go="track">Suivre ma commande</button></div></div></section><div class="hfoot">© '+new Date().getFullYear()+' '+esc(bn(b))+'</div>';
+  h+='<section class="sec"><h2>Nous trouver</h2><div class="cbox"><div class="lines">'+(cl.join('<br>')||'<span class="muted">Contactez la boutique pour toute question.</span>')+'</div><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn go" data-go="shop">Voir la boutique</button><button class="btn ghost" data-go="track">Suivre ma commande</button></div></div></section><div class="hfoot">© '+new Date().getFullYear()+' '+esc(bn(b))+' · <button class="lnk" data-adm="open" type="button">Accès administrateur</button></div>';
   return h;
 }
 function shop(){
@@ -383,23 +400,23 @@ function shop(){
   var h=header(true)+'<div class="wrap">';
   if(!LIVE)h+='<div class="banner demo"><strong>Mode démonstration.</strong> Les commandes ne sont pas envoyées : elles restent sur cet appareil. Branchez la boutique à votre application pour recevoir les vraies commandes.</div>';
   if(cat.offline)h+='<div class="banner">Vous êtes hors ligne : les produits affichés datent de la dernière visite.</div>';
-  h+=acces==='pro'?'<div class="banner pro"><strong>🏢 Accès professionnel</strong> : prix de gros, commande minimum '+money(MIN_PRO)+'. <button class="lnk" data-acces="part">Passer à l’accès particulier</button></div>':'<div class="banner part"><strong>🛍️ Accès particulier</strong> : prix de détail. <button class="lnk" data-acces="pro">Vous êtes un professionnel ? Accès professionnel</button></div>';
+  h+=adm?'<div class="banner pro"><strong>🔐 Mode administrateur</strong> : saisie d’une commande pour un client. Type de vente : <button class="lnk" data-acces="part">'+(acces==='pro'?'Détail':'<u>Détail</u> ✔')+'</button> · <button class="lnk" data-acces="pro">'+(acces==='pro'?'<u>Gros</u> ✔':'Gros')+'</button> · <button class="lnk" data-go="track">Suivi des commandes</button> · <button class="lnk" data-adm="out">Quitter</button></div>':acces==='pro'?'<div class="banner pro"><strong>🏢 Accès professionnel</strong> : prix de gros, commande minimum '+money(MIN_PRO)+'. <button class="lnk" data-acces="part">Passer à l’accès particulier</button></div>':'<div class="banner part"><strong>🛍️ Accès particulier</strong> : prix de détail. <button class="lnk" data-acces="pro">Vous êtes un professionnel ? Accès professionnel</button></div>';
   if(b.msg)h+='<div class="banner">'+esc(b.msg)+'</div>';
   h+='<input id="q" type="search" placeholder="Rechercher un produit" value="'+esc(q)+'" autocomplete="off"><div class="chips">'+cats.map(function(c){return '<button class="chip '+(cc===c?'on':'')+'" data-cat="'+esc(c)+'">'+esc(c)+'</button>'}).join('')+'</div><div class="grid">';
   h+=list.map(function(p){
     var out=!(p.stock>0),cur=cart[p.id]||0;
     return '<div class="card '+(out?'out':'')+'"><div class="ph" data-zoom="'+p.id+'" role="button" tabindex="0" aria-label="Voir le détail de '+esc(p.nom)+'">'+(p.photo?'<img src="'+esc(p.photo)+'" alt="'+esc(p.nom)+'" loading="lazy">':catIcon(p.cat))+'</div><strong class="pn" data-zoom="'+p.id+'" role="button" tabindex="0">'+esc(p.nom)+'</strong>'+(p.desc?'<div class="cdesc">'+esc(p.desc)+'</div>':'')+'<div><span class="price">'+money(px(p))+'</span> <span class="muted">/ '+esc(p.unite)+'</span></div><div class="muted">'+(out?'Indisponible pour le moment':'En stock')+'</div>'+(out?'':'<div class="qty"><button data-m="'+p.id+'" aria-label="moins">−</button><input data-q="'+p.id+'" inputmode="decimal" value="'+(cur?qf(cur):'')+'" placeholder="0"><button data-p="'+p.id+'" aria-label="plus">+</button></div>')+'</div>'}).join('')+'</div>';
   if(!list.length)h+='<p class="muted">Aucun produit trouvé.</p>';
-  h+='</div><div class="bar '+(count()?'on':'')+'"><div class="in"><div><strong>'+count()+' produit'+(count()>1?'s':'')+'</strong><div>'+money(total())+'</div></div><button class="btn" data-go="invoice">Voir ma facture</button>'+(acces==='pro'&&total()<MIN_PRO&&count()?'<div class="minpro">Minimum '+money(MIN_PRO)+' · il manque '+money(MIN_PRO-total())+'</div>':'')+'</div></div>';
+  h+='</div><div class="bar '+(count()?'on':'')+'"><div class="in"><div><strong>'+count()+' produit'+(count()>1?'s':'')+'</strong><div>'+money(total())+'</div></div><button class="btn" data-go="invoice">Voir ma facture</button>'+(!adm&&acces==='pro'&&total()<MIN_PRO&&count()?'<div class="minpro">Minimum '+money(MIN_PRO)+' · il manque '+money(MIN_PRO-total())+'</div>':'')+'</div></div>';
   return h;
 }
 function invoice(){
   var b=cat.boutique||{},L=lines(),f=JSON.parse(localStorage.getItem('bq-cust')||'{}');
   var h=header()+'<div class="wrap"><h2>Ma facture</h2><p class="muted">Vérifiez et modifiez vos quantités. Rien n’est envoyé avant que vous validiez.</p>';
   if(!L.length)return h+'<p>Votre panier est vide.</p><button class="btn" data-go="shop">Voir les produits</button></div>';
-  h+=L.map(function(l){return '<div class="row"><div class="grow"><strong>'+esc(l.p.nom)+'</strong><div class="muted">'+money(px(l.p))+' / '+esc(l.p.unite)+'</div></div><div class="qty"><button data-m="'+l.p.id+'">−</button><input data-q="'+l.p.id+'" inputmode="decimal" value="'+qf(l.qte)+'"><button data-p="'+l.p.id+'">+</button></div><strong style="min-width:92px;text-align:right">'+money(l.qte*px(l.p))+'</strong><button class="btn ghost sm" data-rm="'+l.p.id+'" aria-label="Retirer">✕</button></div>'}).join('');
+  h+=L.map(function(l){return '<div class="row"><div class="grow"><strong>'+esc(l.p.nom)+'</strong>'+(adm?'<div class="muted"><input data-pr="'+l.p.id+'" inputmode="decimal" value="'+px(l.p)+'" style="width:92px;padding:4px 6px;border:2px solid #111;border-radius:8px"> FCFA / '+esc(l.p.unite)+'</div>':'<div class="muted">'+money(px(l.p))+' / '+esc(l.p.unite)+'</div>')+'</div><div class="qty"><button data-m="'+l.p.id+'">−</button><input data-q="'+l.p.id+'" inputmode="decimal" value="'+qf(l.qte)+'"><button data-p="'+l.p.id+'">+</button></div><strong style="min-width:92px;text-align:right">'+money(l.qte*px(l.p))+'</strong><button class="btn ghost sm" data-rm="'+l.p.id+'" aria-label="Retirer">✕</button></div>'}).join('');
   var dd=dl();h+='<div class="line"><span>Sous-total</span><strong id="st">'+money(total())+'</strong></div><div class="line hide" id="feerow"><span id="feel">Livraison</span><strong id="fee"></strong></div><div class="tot"><span>Total</span><span id="tt">'+money(total())+'</span></div><div class="muted" id="fhint"></div><button class="btn ghost" data-go="shop" style="margin-top:8px">+ Ajouter d’autres produits</button>';
-  h+='<h2 style="margin-top:20px">Vos coordonnées</h2><label>Nom complet *<input id="c-nom" autocomplete="name" value="'+esc(f.nom||'')+'"></label><label>Téléphone (WhatsApp de préférence) *<input id="c-tel" type="tel" autocomplete="tel" value="'+esc(f.tel||'')+'"></label><label>Réception<select id="c-mode"><option value="retrait" '+((f.mode!=='livraison'||dd.mode==='non')?'selected':'')+'>Je viens retirer en boutique</option>'+(dd.mode==='non'?'':'<option value="livraison" '+(f.mode==='livraison'?'selected':'')+'>Livraison'+(dd.mode==='gratuit'?' (gratuite)':'')+'</option>')+'</select></label><div id="c-adrw" class="'+(f.mode==='livraison'&&dd.mode!=='non'?'':'hide')+'">'+(dd.mode==='zones'?'<label>Quartier *<select id="c-zone"><option value="">Choisir mon quartier</option>'+dd.zones.map(function(z){return '<option value="'+esc(z.n)+'" '+(f.zone===z.n?'selected':'')+'>'+esc(z.n)+' · '+(z.p>0?money(z.p):'gratuit')+'</option>'}).join('')+'</select></label>':'')+'<label>Adresse précise de livraison<input id="c-adr" autocomplete="street-address" value="'+esc(f.adresse||'')+'"></label></div><label>Date souhaitée (facultatif)<input id="c-date" type="date" value="'+esc(f.date||'')+'"></label><label>Précisions (facultatif)<textarea id="c-note" rows="2">'+esc(f.note||'')+'</textarea></label><input class="hp" id="c-hp" tabindex="-1" autocomplete="off" aria-hidden="true">';
+  h+='<h2 style="margin-top:20px">Vos coordonnées</h2><label>Nom complet *<input id="c-nom" autocomplete="name" value="'+esc(f.nom||'')+'"></label><label>Téléphone (WhatsApp de préférence) '+(adm?'(facultatif)':'*')+'<input id="c-tel" type="tel" autocomplete="tel" value="'+esc(f.tel||'')+'"></label><label>Réception<select id="c-mode"><option value="retrait" '+((f.mode!=='livraison'||dd.mode==='non')?'selected':'')+'>Je viens retirer en boutique</option>'+(dd.mode==='non'?'':'<option value="livraison" '+(f.mode==='livraison'?'selected':'')+'>Livraison'+(dd.mode==='gratuit'?' (gratuite)':'')+'</option>')+'</select></label><div id="c-adrw" class="'+(f.mode==='livraison'&&dd.mode!=='non'?'':'hide')+'">'+(dd.mode==='zones'?'<label>Quartier *<select id="c-zone"><option value="">Choisir mon quartier</option>'+dd.zones.map(function(z){return '<option value="'+esc(z.n)+'" '+(f.zone===z.n?'selected':'')+'>'+esc(z.n)+' · '+(z.p>0?money(z.p):'gratuit')+'</option>'}).join('')+'</select></label>':'')+'<label>Adresse précise de livraison<input id="c-adr" autocomplete="street-address" value="'+esc(f.adresse||'')+'"></label></div><label>Date souhaitée (facultatif)<input id="c-date" type="date" value="'+esc(f.date||'')+'"></label><label>Précisions (facultatif)<textarea id="c-note" rows="2">'+esc(f.note||'')+'</textarea></label><input class="hp" id="c-hp" tabindex="-1" autocomplete="off" aria-hidden="true">';
   if(b.liv)h+='<p class="muted">'+esc(b.liv)+'</p>';
   h+='<div id="msg"></div><p class="muted">Le paiement se fait à la réception, selon l’accord avec la boutique. La boutique confirme votre commande par téléphone ou WhatsApp.</p><div class="actions" style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn green" id="send" '+(busy?'disabled':'')+'>Valider et envoyer ma commande</button><button class="btn ghost" data-go="shop">Retour</button></div></div>';
   return h;
@@ -433,14 +450,15 @@ async function send(){
   var err=function(t){m.innerHTML='<div class="err">'+esc(t)+'</div>'};
   if(($('#c-hp')||{}).value)return;
   if(!lines().length)return err('Votre panier est vide.');
-  if(c.nom.trim().length<2)return err('Indiquez votre nom.');
-  if(c.tel.replace(/\D/g,'').length<8)return err('Indiquez un numéro de téléphone valide.');
+  if(adm&&c.nom.trim().length<2)c.nom='Client de passage';if(c.nom.trim().length<2)return err('Indiquez votre nom.');
+  if((!adm||c.tel.trim())&&c.tel.replace(/\D/g,'').length<8)return err('Indiquez un numéro de téléphone valide.');
   if(c.mode==='livraison'&&!c.adresse.trim())return err('Indiquez l’adresse de livraison.');
-  if(acces==='pro'&&total()<MIN_PRO)return err('Accès professionnel : la commande minimum est de '+money(MIN_PRO)+' (il manque '+money(MIN_PRO-total())+').');
+  if(!adm&&acces==='pro'&&total()<MIN_PRO)return err('Accès professionnel : la commande minimum est de '+money(MIN_PRO)+' (il manque '+money(MIN_PRO-total())+').');
   var fe=feeNow(c);if(fe.err)return err(fe.err);
-  var lastT=+localStorage.getItem('bq-last')||0;if(LIVE&&Date.now()-lastT<30000)return err('Patientez quelques secondes avant de renvoyer une commande.');
+  var lastT=+localStorage.getItem('bq-last')||0;if(LIVE&&!adm&&Date.now()-lastT<30000)return err('Patientez quelques secondes avant de renvoyer une commande.');
   var L=lines().map(function(l){return{pid:l.p.id,nom:l.p.nom,unite:l.p.unite,qte:l.qte,prix:px(l.p)}});
   var o={ref:ref(),nom:c.nom.trim(),tel:c.tel.trim(),mode:c.mode,adresse:c.mode==='livraison'?c.adresse.trim():'',zone:c.mode==='livraison'?c.zone:'',frais:fe.fee,liv:c.date,note:c.note.trim(),acces:acces,lignes:L,sous:L.reduce(function(s,l){return s+l.qte*l.prix},0),total:L.reduce(function(s,l){return s+l.qte*l.prix},0)+fe.fee,ts:Date.now()};
+  if(adm){try{o.adm=true;o.adp=await sha256hex((await admKey(admCode,'ne-proof'))+'|'+o.ref+'|'+Math.round(o.total))}catch(e){return err('Code administrateur non valide sur cet appareil.')}}
   busy=true;$('#send').disabled=true;
   try{
     if(LIVE){await rest('POST','web_orders',{id:o.ref,ts:o.ts,body:o,imported:false},{Prefer:'return=minimal'});try{localStorage.setItem('bq-last',String(Date.now()))}catch(e){}o.sent=true}
@@ -453,7 +471,8 @@ async function send(){
   }
 }
 document.addEventListener('click',function(e){
-  var t=e.target.closest('[data-cat],[data-m],[data-p],[data-rm],[data-go],[data-zoom],[data-open],[data-hcat],[data-post],[data-bcat],[data-acces],[data-tref],#t-go,#t-sim,#send,#print');if(!t)return;
+  var t=e.target.closest('[data-cat],[data-m],[data-p],[data-rm],[data-go],[data-zoom],[data-open],[data-hcat],[data-post],[data-bcat],[data-acces],[data-tref],#t-go,#t-sim,#send,#print,[data-adm]');if(!t)return;
+  if(t.dataset.adm){if(t.dataset.adm==='open')admOpen();else admOut();return}
   if(t.dataset.tref){trackRef=t.dataset.tref;draw();trackLoad(trackRef);return}
   if(t.id==='t-go'){trackLoad(($('#t-ref')||{}).value);return}
   if(t.id==='t-sim'){var m=JSON.parse(localStorage.getItem('bq-demo-st')||'{}');m[trackRef]=Math.min(3,(m[trackRef]||0)+1);localStorage.setItem('bq-demo-st',JSON.stringify(m));trackLoad(trackRef);return}
@@ -474,12 +493,13 @@ document.addEventListener('click',function(e){
 document.addEventListener('input',function(e){
   var t=e.target;
   if(t.id==='q'){q=t.value;draw();return}
+  if(t.dataset&&t.dataset.pr){pxo[t.dataset.pr]=Math.max(0,num(t.value));updTotals();return}
   if(t.dataset&&t.dataset.q){setQty(t.dataset.q,num(t.value));updTotals();var bar=$('.bar');if(bar){bar.className='bar '+(count()?'on':'');bar.querySelector('strong').textContent=count()+' produit'+(count()>1?'s':'');bar.querySelector('.in div div').textContent=money(total())}return}
   if(t.id==='c-mode'){$('#c-adrw').className=t.value==='livraison'?'':'hide';updTotals()}
   if(t.id==='c-zone')updTotals();
   if(/^c-/.test(t.id))saveCust();
 });
-document.addEventListener('change',function(e){if(e.target.dataset&&e.target.dataset.q){draw()}});
+document.addEventListener('change',function(e){if(e.target.dataset&&(e.target.dataset.q||e.target.dataset.pr)){draw()}});
 
 
 
@@ -556,7 +576,7 @@ window.addEventListener('popstate',function(){if(['home','shop','blog','post'].i
 document.addEventListener('keydown',function(e){var t=e.target;if(e.key==='Enter'&&t&&t.getAttribute&&t.getAttribute('role')==='link'&&t.dataset&&t.dataset.go)t.click()});
 var DEMO=!LIVE&&!!(window.BOUTIQUE_DEMO||/[?&]demo=1/.test(location.search)||/^(localhost|127\.)/.test(location.hostname)||location.protocol==='file:');
 if(!LIVE&&!DEMO){document.title='Niger Épices · Bientôt en ligne';document.getElementById('app').innerHTML='<div class="page"><div class="wrap" style="text-align:center;padding:60px 16px"><h1 style="font-size:34px;margin:0 0 10px">Niger Épices</h1><p style="font-size:18px">Notre boutique en ligne ouvre bientôt.</p><p class="muted">Épices, viandes séchées et saveurs du Sahel, à Bamako.</p></div></div>';return}
-loadCart();loadCat().then(function(){loadBlog();if(view==='post')loadPost(postId);if(cat){document.title=bn(cat.boutique||{})+' · Commander en ligne';Object.keys(cart).forEach(function(id){if(!prod(id))delete cart[id]})}draw();if(view==='track'&&trackRef)trackLoad(trackRef)});
+loadCart();loadCat().then(function(){admRestore();loadBlog();if(view==='post')loadPost(postId);if(cat){document.title=bn(cat.boutique||{})+' · Commander en ligne';Object.keys(cart).forEach(function(id){if(!prod(id))delete cart[id]})}draw();if(view==='track'&&trackRef)trackLoad(trackRef)});
 })();
 </script>
 </body>
