@@ -271,9 +271,24 @@ function admOpen(){
   o.innerHTML='<div style="background:#fff;color:#111;border-radius:16px;padding:18px;max-width:340px;width:100%;display:grid;gap:10px"><h3 style="margin:0">Accès administrateur</h3><input id="adm-in" type="password" autocomplete="off" placeholder="Code administrateur" style="padding:10px;border:2px solid #111;border-radius:10px;font-size:16px"><div id="adm-m" style="color:#C8102E;font-size:14px;min-height:18px"></div><div style="display:flex;gap:8px"><button class="btn" id="adm-ok" type="button">Entrer</button><button class="btn ghost" id="adm-no" type="button">Annuler</button></div></div>';
   document.body.appendChild(o);var inp=document.getElementById('adm-in');inp.focus();
   var go=async function(){var m=document.getElementById('adm-m');m.textContent='Vérification…';var r=await admCheck(inp.value);
-    if(r==='ok'){adm=true;admCode=inp.value;pxo={};try{sessionStorage.setItem('bq-admc',admCode)}catch(e){}o.remove();enterShop()}
+    if(r==='ok'){adm=true;admCode=inp.value;pxo={};try{localStorage.setItem('bq-noc','1')}catch(e){}try{sessionStorage.setItem('bq-admc',admCode)}catch(e){}o.remove();enterShop()}
     else m.textContent=r==='off'?'L’accès administrateur n’est pas activé dans la gestion.':r==='bad'?'Code incorrect.':'Vérification impossible sur cet appareil.'};
   document.getElementById('adm-ok').onclick=go;document.getElementById('adm-no').onclick=function(){o.remove()};inp.onkeydown=function(e){if(e.key==='Enter')go()};
+}
+function visitPing(){
+  if(!LIVE)return;
+  try{
+    if(localStorage.getItem('bq-noc')==='1')return;
+    var d=new Date().toISOString().slice(0,10);if(localStorage.getItem('bq-vd')===d)return;
+    var vid=localStorage.getItem('bq-vid'),ret=!!vid;if(!vid){vid=Math.random().toString(36).slice(2,10);localStorage.setItem('bq-vid',vid)}
+    var ref=(document.referrer||'').toLowerCase(),q=(location.search||'').toLowerCase(),src='direct';
+    var m=/[?&]s=([a-z]+)/.exec(q),tag=m?m[1]:'';
+    if(tag==='wa')src='whatsapp';else if(tag==='fb')src='facebook';else if(tag==='tt')src='tiktok';else if(tag==='ig')src='instagram';
+    else if(/whatsapp|wa\.me/.test(ref))src='whatsapp';else if(/facebook|fb\.com|l\.facebook/.test(ref))src='facebook';else if(/tiktok/.test(ref))src='tiktok';else if(/instagram/.test(ref))src='instagram';else if(/google|bing|duckduckgo|yahoo/.test(ref))src='google';else if(ref&&ref.indexOf(location.host)<0)src='autre';
+    var mob=/android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent||'');
+    localStorage.setItem('bq-vd',d);
+    rest('POST','web_orders',{id:'v-'+d+'-'+vid,ts:Date.now(),body:{v:1,d:d,vid:vid,s:src,m:mob?'mob':'pc',r:ret?1:0},imported:false},{Prefer:'return=minimal'}).catch(function(){try{localStorage.removeItem('bq-vd')}catch(e){}});
+  }catch(e){}
 }
 async function admRestore(){try{var c=sessionStorage.getItem('bq-admc');if(c&&(await admCheck(c))==='ok'){adm=true;admCode=c;draw()}}catch(e){}}
 function admOut(){adm=false;admCode='';pxo={};try{sessionStorage.removeItem('bq-admc')}catch(e){}enterShop()}
@@ -587,7 +602,7 @@ window.addEventListener('popstate',function(){if(['home','shop','blog','post'].i
 document.addEventListener('keydown',function(e){var t=e.target;if(e.key==='Enter'&&t&&t.getAttribute&&t.getAttribute('role')==='link'&&t.dataset&&t.dataset.go)t.click()});
 var DEMO=!LIVE&&!!(window.BOUTIQUE_DEMO||/[?&]demo=1/.test(location.search)||/^(localhost|127\.)/.test(location.hostname)||location.protocol==='file:');
 if(!LIVE&&!DEMO){document.title='Niger Épices · Bientôt en ligne';document.getElementById('app').innerHTML='<div class="page"><div class="wrap" style="text-align:center;padding:60px 16px"><h1 style="font-size:34px;margin:0 0 10px">Niger Épices</h1><p style="font-size:18px">Notre boutique en ligne ouvre bientôt.</p><p class="muted">Épices, viandes séchées et saveurs du Sahel, à Bamako.</p></div></div>';return}
-loadCart();loadCat().then(function(){admRestore();loadBlog();if(view==='post')loadPost(postId);if(cat){document.title=bn(cat.boutique||{})+' · Commander en ligne';Object.keys(cart).forEach(function(id){if(!prod(id))delete cart[id]})}draw();if(view==='track'&&trackRef)trackLoad(trackRef)});
+loadCart();loadCat().then(function(){visitPing();admRestore();loadBlog();if(view==='post')loadPost(postId);if(cat){document.title=bn(cat.boutique||{})+' · Commander en ligne';Object.keys(cart).forEach(function(id){if(!prod(id))delete cart[id]})}draw();if(view==='track'&&trackRef)trackLoad(trackRef)});
 })();
 </script>
 </body>
