@@ -709,6 +709,34 @@ function webOrderRec(id,o){
   var note=['Commande web '+String(o.ref||'').slice(0,24),o._adm?'Saisie par l’administrateur':'',o.acces==='pro'?'Accès professionnel (prix de gros)':'',o.mode==='livraison'?'Livraison':'Retrait en boutique',String(o.note||'').slice(0,300)].filter(Boolean).join(' · ');
   return {id:id,ts:+o.ts||Date.now(),date:today(),clientId:cl?cl.id:'',clientNom:cl?cl.nom:String(o.nom||'Client web').slice(0,80),tel:tel,adresse:String(o.adresse||'').slice(0,200),note:note,type:(o.acces==='pro'?'Gros':'Détail'),lignes:L,total:total,frais:frais,zone:zone,modeLiv:o.mode==='livraison'?'livraison':'retrait',livraison:/^\d{4}-\d{2}-\d{2}$/.test(o.liv||'')?o.liv:'',acompte:0,statut:'Nouvelle',web:true,ref:String(o.ref||'').slice(0,24),ecart:hors||fe||Math.round(total)!==Math.round(+o.total||0)};
 }
+function visitAdd(V,o){
+  var d=String(o.d||'').slice(0,10);if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return false;
+  var e=V[d]||(V[d]={n:0,nw:0,src:{},dev:{},ids:[]});if(!e.ids)e.ids=[];
+  var vid=String(o.vid||'').slice(0,12);if(vid&&e.ids.indexOf(vid)>=0)return false;
+  e.n++;if(!o.r)e.nw++;var s=String(o.s||'direct').slice(0,12),m=o.m==='mob'?'mob':'pc';e.src[s]=(e.src[s]||0)+1;e.dev[m]=(e.dev[m]||0)+1;
+  if(vid&&e.ids.length<3000)e.ids.push(vid);return true;
+}
+function visitsPrune(V){
+  var lim=new Date();lim.setDate(lim.getDate()-4);var l3=dstr(lim),old=new Date();old.setDate(old.getDate()-200);var l200=dstr(old);
+  Object.keys(V).forEach(function(k){if(k<l200)delete V[k];else if(k<l3&&V[k].ids)delete V[k].ids});
+}
+function visitsCard(){
+  if(!reglages.bq_actif)return '';
+  var V=reglages.visites||{},days=[],i,sum=function(from){var t=0;Object.keys(V).forEach(function(k){if(k>=from)t+=V[k].n||0});return t};
+  for(i=13;i>=0;i--){var dd=new Date();dd.setDate(dd.getDate()-i);var k=dstr(dd);days.push({label:k.slice(8),value:(V[k]||{}).n||0,hi:i===0})}
+  var t0=dstr(new Date()),w=new Date();w.setDate(w.getDate()-6);var m=new Date();m.setDate(m.getDate()-29);var f7=dstr(w),f30=dstr(m);
+  var tod=(V[t0]||{}).n||0,v7=sum(f7),v30=sum(f30);
+  var src={},dev={},nw=0;Object.keys(V).forEach(function(k){if(k<f30)return;var e=V[k];nw+=e.nw||0;Object.keys(e.src||{}).forEach(function(s){src[s]=(src[s]||0)+e.src[s]});Object.keys(e.dev||{}).forEach(function(s){dev[s]=(dev[s]||0)+e.dev[s]})});
+  var ord=data.commandes.filter(function(c){return c.web&&c.date>=f30}).length;
+  var h=sec('Visiteurs de la boutique en ligne');
+  if(!v30&&!Object.keys(V).length)return h+'<section class="card"><p class="muted" style="margin:0">Les visites apparaîtront ici dès que la nouvelle version de la boutique sera en ligne et que quelqu’un l’ouvrira. Ouvrez « Commandes » et touchez « Récupérer les commandes web » pour les mettre à jour.</p></section>';
+  h+='<div class="kpis">'+kpi('Aujourd’hui',nf.format(tod),'visiteur'+(tod>1?'s':''))+kpi('7 derniers jours',nf.format(v7),'visiteurs')+kpi('30 derniers jours',nf.format(v30),nw+' nouveau'+(nw>1?'x':'')+' · '+(v30-nw)+' déjà venu'+((v30-nw)>1?'s':''),'gold')+'</div>';
+  h+='<section class="card"><h3>Visiteurs par jour (14 jours)</h3>'+barChart(days)+'</section>';
+  var LB={whatsapp:'WhatsApp',facebook:'Facebook',tiktok:'TikTok',instagram:'Instagram',google:'Recherche Google',direct:'Accès direct',autre:'Autre site'},o2={};Object.keys(src).forEach(function(k){o2[LB[k]||k]=src[k]});
+  if(Object.keys(o2).length)h+='<section class="card"><h3>D’où viennent-ils ? (30 jours)</h3>'+hbars(o2,function(v){return nf.format(v)})+'<p class="muted" style="margin:8px 0 0">Téléphone '+(dev.mob||0)+' · ordinateur '+(dev.pc||0)+(v30>0?' · '+ord+' commande'+(ord>1?'s':'')+' web, soit '+Math.round(ord/v30*100)+' % des visiteurs':'')+'</p></section>';
+  h+='<p class="muted" style="margin:6px 0 0;font-size:13px">Un visiteur est compté une fois par jour et par appareil. On ne sait pas qui il est. Pour savoir d’où viennent vos clients, partagez : nigerepices.com/?s=wa (WhatsApp), ?s=tt (TikTok), ?s=fb (Facebook), ?s=ig (Instagram). Vos propres visites ne comptent plus dès que vous utilisez l’accès administrateur sur l’appareil.</p>';
+  return h;
+}
 async function webApplyEdit(o){
   var ref=String(o.edit||'').slice(0,24),c=data.commandes.find(function(x){return x.web&&x.ref===ref});
   if(!c){await S.put('commandes',webOrderRec('web-'+ref,Object.assign({},o,{ref:ref})));return true}
@@ -724,13 +752,17 @@ async function webPull(manual){
   if(navigator.onLine===false){if(manual)toast('Pas de connexion','bad');return 0}
   webBusy=true;var n=0,ne=0;
   try{
-    var rows=await opsRest('GET','web_orders?order=ts.asc&limit=50&select=id,body');
+    var rows=await opsRest('GET','web_orders?order=ts.asc&limit=300&select=id,body'),vids=[],V=JSON.parse(JSON.stringify(reglages.visites||{})),vch=false;
     for(var i=0;i<rows.length;i++){
-      var o=rows[i].body,cid='web-'+rows[i].id;if(o&&o.adm)o._adm=await admProofOk(o);
+      var o=rows[i].body,cid='web-'+rows[i].id;
+      if(o&&o.v&&!o.lignes){if(visitAdd(V,o))vch=true;vids.push(rows[i].id);continue}
+      if(o&&o.adm)o._adm=await admProofOk(o);
       if(o&&o.edit){if(await webApplyEdit(o))ne++;await opsRest('DELETE','web_orders?id=eq.'+encodeURIComponent(rows[i].id),null,{Prefer:'return=minimal'});continue}
       if(o&&Array.isArray(o.lignes)&&!data.commandes.some(function(c){return c.id===cid})){await S.put('commandes',webOrderRec(cid,o));n++}
       await opsRest('DELETE','web_orders?id=eq.'+encodeURIComponent(rows[i].id),null,{Prefer:'return=minimal'});
     }
+    if(vids.length){for(var vi=0;vi<vids.length;vi+=40){var ch=vids.slice(vi,vi+40).map(function(x){return encodeURIComponent(x)}).join(',');try{await opsRest('DELETE','web_orders?id=in.('+ch+')',null,{Prefer:'return=minimal'})}catch(e){}}}
+    if(vch||vids.length){visitsPrune(V);await S.setReglages({visites:V})}
     SYNC.bqe='';SYNC.bqp=Date.now();saveSyncCfg();
     if(n)await webStatusSync();
     if(manual&&!n)toast('Aucune nouvelle commande');
@@ -1474,6 +1506,7 @@ function vCockpit(){
     kpi('Marge du mois',money(sm.marge),sm.caNet>0?Math.round(sm.marge/sm.caNet*100)+' % des ventes':'','gold')+
     kpi('Charges du mois',money(sm.charges),'salaires, loyer, taxes…')+
     kpi('Résultat estimé',money(sm.net),'marge moins charges',sm.net<0?'warn':'good')+'</div>';
+  h+=visitsCard();
   h+=sec('Patrimoine')+'<div class="kpis">'+
     kpi('Valeur du stock',money(stockVal),'au prix de revient')+
     kpi('Crédits clients',money(du),'à encaisser',du>0?'warn':'')+
